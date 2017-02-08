@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/immofon/exposer/exposer/cmd"
+import "github.com/service-exposer/exposer/exposer/cmd"
 
 func main() {
 	cmd.Execute()
