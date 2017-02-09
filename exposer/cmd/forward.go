@@ -52,6 +52,7 @@ func init() {
 		conn, err := utils.DialWebsocket(server_url)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "dial server", server_url, "failure", err)
+			os.Exit(-3)
 		}
 		defer conn.Close()
 

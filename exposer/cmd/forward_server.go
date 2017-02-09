@@ -5,8 +5,7 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
+// // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
@@ -16,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 
@@ -60,6 +60,7 @@ func init() {
 			os.Exit(1)
 		}
 
+		log.Print("listen ", addr)
 		ln, err := utils.WebsocketListener("tcp", addr)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "listen", addr, "failure", err)
@@ -67,6 +68,7 @@ func init() {
 		}
 		defer ln.Close()
 
+		log.Print("serve")
 		exposer.Serve(ln, func(conn net.Conn) exposer.ProtocalHandler {
 			proto := exposer.NewProtocal(conn)
 			proto.On = forward.ServerSide(func(k string) bool {
