@@ -3,7 +3,9 @@ package exposer
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net"
+	"os"
 	"sync"
 
 	"github.com/inconshreveable/muxado"
@@ -80,13 +82,13 @@ func (proto *Protocal) Forward(conn net.Conn) {
 	go func() {
 		defer wg.Done()
 		defer conn.Close()
-		io.Copy(conn, io.MultiReader(proto.handshakeDecoder.Buffered(), proto.conn))
+		io.Copy(conn, io.TeeReader(io.MultiReader(proto.handshakeDecoder.Buffered(), proto.conn), os.Stdout))
 	}()
 
 	go func() {
 		defer wg.Done()
 		defer proto.conn.Close()
-		io.Copy(proto.conn, conn)
+		io.Copy(proto.conn, io.TeeReader(conn, os.Stdout))
 	}()
 	wg.Wait()
 }
@@ -94,10 +96,12 @@ func (proto *Protocal) Forward(conn net.Conn) {
 func (proto *Protocal) Request(cmd string, details interface{}) {
 	err := proto.Reply(cmd, details)
 	if err != nil {
+		log.Print(".Request ", cmd, " ", err)
 		proto.conn.Close()
 		return
 	}
 
+	log.Println("start .Handle ", cmd)
 	proto.Handle()
 }
 
