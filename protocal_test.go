@@ -39,4 +39,21 @@ func TestProtocal_Reply(t *testing.T) {
 		}
 	}
 
+	{
+		_, c := net.Pipe()
+		proto := NewProtocal(c)
+		proto.isHandshakeDone = true
+
+		func() {
+			defer proto.conn.Close()
+			defer func() {
+				if r := recover(); r == nil {
+					t.Fatal("expect panic")
+				}
+			}()
+
+			proto.Reply("test", nil)
+		}()
+	}
+
 }
