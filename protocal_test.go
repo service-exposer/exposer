@@ -1,12 +1,19 @@
 package exposer
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
+	"os"
 	"reflect"
+	"sync"
 	"testing"
+	"time"
+
+	"github.com/inconshreveable/muxado"
 )
 
 func TestProtocal_Reply(t *testing.T) {
@@ -105,7 +112,6 @@ func TestProtocal_Forword(t *testing.T) {
 		proto.On = func(proto *Protocal, cmd string, details []byte) error {
 			switch cmd {
 			case "forward":
-				fmt.Println("ok 1")
 				proto.Forward(c2)
 			}
 			return nil
@@ -124,5 +130,233 @@ func TestProtocal_Forword(t *testing.T) {
 		if string(data) != "test" {
 			t.Fatal("expect", "test", "got", string(data))
 		}
+	}()
+}
+
+func Test_newReadWriteCloser(t *testing.T) {
+	s, c := net.Pipe()
+	defer s.Close()
+
+	go func() {
+		s.Write([]byte("world"))
+		s.Close()
+	}()
+
+	buf := &bytes.Buffer{}
+	buf.WriteString("hello")
+
+	rwc := newReadWriteCloser(buf, c)
+
+	data, err := ioutil.ReadAll(rwc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(data) != "helloworld" {
+		t.Error("expect", "helloworld", "got", string(data))
+	}
+}
+
+func TestProtocal_Multiplex(t *testing.T) {
+	func() { // test lib github.com/inconshreveable/muxado
+		s, c := net.Pipe()
+		defer s.Close()
+
+		session_s := muxado.Server(s, nil)
+
+		defer session_s.Close()
+
+		go func() {
+			for {
+				conn, err := session_s.Accept()
+				if err != nil {
+					return
+				}
+
+				go func(conn net.Conn) { // echo service
+					defer conn.Close()
+
+					io.Copy(conn, conn)
+				}(conn)
+			}
+		}()
+		time.Sleep(time.Second)
+
+		session := muxado.Client(c, nil)
+		defer session.Close()
+
+		n := 100
+		wg := &sync.WaitGroup{}
+		wg.Add(n)
+		for i := 0; i < n; i++ {
+			go func(i int) {
+				defer wg.Done()
+
+				conn, err := session.Open()
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer conn.Close()
+
+				wbuf := &bytes.Buffer{}
+
+				conn.Write(wbuf.Bytes())
+
+				rbuf := make([]byte, wbuf.Len())
+
+				_, err = io.ReadAtLeast(conn, rbuf, len(rbuf))
+				if err != nil {
+					t.Fatal(err, string(rbuf))
+				}
+
+				if !bytes.Equal(rbuf, wbuf.Bytes()) {
+					t.Fatal("expect", string(wbuf.Bytes()), "got", string(rbuf))
+				}
+			}(i)
+		}
+
+		wg.Wait()
+	}()
+
+	func() {
+		s, c := net.Pipe()
+		defer s.Close()
+
+		session_s := NewProtocal(s).Multiplex(false)
+
+		defer session_s.Close()
+
+		go func() {
+			for {
+				conn, err := session_s.Accept()
+				if err != nil {
+					return
+				}
+
+				go func(conn net.Conn) { // echo service
+					defer conn.Close()
+
+					io.Copy(conn, conn)
+				}(conn)
+			}
+		}()
+		time.Sleep(time.Second)
+
+		session := NewProtocal(c).Multiplex(true)
+		defer session.Close()
+
+		n := 100
+		wg := &sync.WaitGroup{}
+		wg.Add(n)
+		for i := 0; i < n; i++ {
+			go func(i int) {
+				defer wg.Done()
+
+				conn, err := session.Open()
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer conn.Close()
+
+				wbuf := &bytes.Buffer{}
+				fmt.Fprint(wbuf, "hello:", i)
+
+				conn.Write(wbuf.Bytes())
+
+				rbuf := make([]byte, wbuf.Len())
+
+				_, err = io.ReadAtLeast(conn, rbuf, len(rbuf))
+				if err != nil {
+					t.Fatal(err, string(rbuf))
+				}
+
+				if !bytes.Equal(rbuf, wbuf.Bytes()) {
+					t.Fatal("expect", string(wbuf.Bytes()), "got", string(rbuf))
+				}
+			}(i)
+		}
+
+		wg.Wait()
+	}()
+
+	func() {
+		s, c := net.Pipe()
+		defer s.Close()
+
+		proto_s := NewProtocal(s)
+		proto_s.On = func(proto *Protocal, cmd string, details []byte) error {
+			switch cmd {
+			case "multiplex":
+				err := proto.Reply("multiplex:reply", nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				session := proto.Multiplex(false)
+				defer session.Close()
+
+				for {
+					conn, err := session.Accept()
+					if err != nil {
+						return err
+					}
+
+					go func(conn net.Conn) { // echo service
+						defer conn.Close()
+
+						io.Copy(conn, io.TeeReader(conn, os.Stdout))
+					}(conn)
+				}
+			}
+
+			return nil
+		}
+		go proto_s.Handle()
+
+		proto_c := NewProtocal(c)
+		proto_c.On = func(proto *Protocal, cmd string, details []byte) error {
+			switch cmd {
+			case "multiplex:reply":
+				session := proto.Multiplex(true)
+				defer session.Close()
+
+				n := 100
+				wg := &sync.WaitGroup{}
+				wg.Add(n)
+				for i := 0; i < n; i++ {
+					go func(i int) {
+						defer wg.Done()
+
+						conn, err := session.Open()
+						if err != nil {
+							t.Fatal(err)
+						}
+						defer conn.Close()
+
+						wbuf := &bytes.Buffer{}
+
+						conn.Write(wbuf.Bytes())
+
+						rbuf := make([]byte, wbuf.Len())
+
+						_, err = io.ReadAtLeast(conn, rbuf, len(rbuf))
+						if err != nil {
+							t.Fatal(err, string(rbuf))
+						}
+
+						if !bytes.Equal(rbuf, wbuf.Bytes()) {
+							t.Fatal("expect", string(wbuf.Bytes()), "got", string(rbuf))
+						}
+
+					}(i)
+				}
+
+				wg.Wait()
+			}
+
+			return nil
+		}
+
+		proto_c.Request("multiplex", nil)
 	}()
 }

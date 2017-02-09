@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"net"
-	"os"
 	"sync"
 
 	"github.com/inconshreveable/muxado"
@@ -32,10 +31,16 @@ func (proto *Protocal) Reply(cmd string, details interface{}) error {
 		panic("protoport handshake is done, unexpect Reply call")
 	}
 
-	return json.NewEncoder(proto.conn).Encode(&HandshakeOutgoing{
+	data, err := json.Marshal(&HandshakeOutgoing{
 		Command: cmd,
 		Details: details,
 	})
+	if err != nil {
+		return err
+	}
+
+	_, err = proto.conn.Write(data)
+	return err
 }
 
 func newReadWriteCloser(buffered io.Reader, conn net.Conn) io.ReadWriteCloser {
@@ -74,13 +79,13 @@ func (proto *Protocal) Forward(conn net.Conn) {
 	go func() {
 		defer wg.Done()
 		defer conn.Close()
-		io.Copy(conn, io.TeeReader(io.MultiReader(proto.handshakeDecoder.Buffered(), proto.conn), os.Stdout))
+		io.Copy(conn, io.MultiReader(proto.handshakeDecoder.Buffered(), proto.conn))
 	}()
 
 	go func() {
 		defer wg.Done()
 		defer proto.conn.Close()
-		io.Copy(proto.conn, io.TeeReader(conn, os.Stdout))
+		io.Copy(proto.conn, conn)
 	}()
 	wg.Wait()
 }
@@ -103,7 +108,7 @@ func (proto *Protocal) Handle() {
 	}
 
 	var handshake HandshakeIncoming
-	for {
+	for !proto.isHandshakeDone {
 		err := proto.handshakeDecoder.Decode(&handshake)
 		if err != nil {
 			// TODO: handle error
