@@ -2,14 +2,14 @@ package exposer
 
 import "net"
 
-type TransportHandler interface {
+type ProtocalHandler interface {
 	Handle()
 	Request(cmd string, details interface{})
 }
 
-type NewTransportHandler func(net.Conn) TransportHandler
+type NewProtocalHandler func(net.Conn) ProtocalHandler
 
-func Serve(ln net.Listener, newHandler NewTransportHandler) {
+func Serve(ln net.Listener, newHandler NewProtocalHandler) {
 	defer ln.Close()
 
 	for {

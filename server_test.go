@@ -21,9 +21,9 @@ func TestServe(t *testing.T) {
 	}
 
 	ln, dial := NewPipeListener()
-	go Serve(ln, func(conn net.Conn) TransportHandler {
-		trans := NewTransport(conn)
-		trans.On = func(trans *Transport, cmd string, details []byte) error {
+	go Serve(ln, func(conn net.Conn) ProtocalHandler {
+		proto := NewProtocal(conn)
+		proto.On = func(proto *Protocal, cmd string, details []byte) error {
 			switch cmd {
 			case CMD_ECHO_REQ:
 				var req echoReq
@@ -32,14 +32,14 @@ func TestServe(t *testing.T) {
 					return err
 				}
 
-				return trans.Reply(CMD_ECHO_REPLY, &echoReply{
+				return proto.Reply(CMD_ECHO_REPLY, &echoReply{
 					Message: req.Message,
 				})
 			}
 			return nil
 		}
 
-		return trans
+		return proto
 	})
 
 	// wait server setup
@@ -51,8 +51,8 @@ func TestServe(t *testing.T) {
 	}
 
 	echo := make(chan string)
-	trans := NewTransport(conn)
-	trans.On = func(trans *Transport, cmd string, details []byte) error {
+	proto := NewProtocal(conn)
+	proto.On = func(proto *Protocal, cmd string, details []byte) error {
 		switch cmd {
 		case CMD_ECHO_REPLY:
 			var reply echoReply
@@ -68,7 +68,7 @@ func TestServe(t *testing.T) {
 	}
 
 	expect := "exposer test"
-	go trans.Request(CMD_ECHO_REQ, &echoReq{
+	go proto.Request(CMD_ECHO_REQ, &echoReq{
 		Message: expect,
 	})
 
