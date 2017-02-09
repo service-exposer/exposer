@@ -56,4 +56,14 @@ func TestProtocal_Reply(t *testing.T) {
 		}()
 	}
 
+	{
+		_, c := net.Pipe()
+		proto := NewProtocal(c)
+		c.Close()
+
+		err := proto.Reply("test", nil)
+		if err == nil {
+			t.Fatal("expect err")
+		}
+	}
 }
