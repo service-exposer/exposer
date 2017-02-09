@@ -16,7 +16,12 @@ package cmd
 
 import (
 	"fmt"
+	"net"
+	"os"
 
+	"github.com/service-exposer/exposer"
+	"github.com/service-exposer/exposer/listener/utils"
+	"github.com/service-exposer/exposer/protocal/forward"
 	"github.com/spf13/cobra"
 )
 
@@ -50,6 +55,24 @@ func init() {
 	forward_serverCmd.Flags().StringVarP(&protocal, "protocal", "", protocal, "selected protocal")
 
 	forward_serverCmd.Run = func(cmd *cobra.Command, args []string) {
-		fmt.Println("key:", key)
+		if protocal != "ws" {
+			fmt.Fprintln(os.Stderr, "Just support protocal ws, now")
+			os.Exit(1)
+		}
+
+		ln, err := utils.WebsocketListener("tcp", addr)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "listen", addr, "failure", err)
+			os.Exit(-2)
+		}
+		defer ln.Close()
+
+		exposer.Serve(ln, func(conn net.Conn) exposer.ProtocalHandler {
+			proto := exposer.NewProtocal(conn)
+			proto.On = forward.ServerSide(func(k string) bool {
+				return k == key
+			})
+			return proto
+		})
 	}
 }

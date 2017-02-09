@@ -2,7 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"net"
+	"os"
 
+	"github.com/service-exposer/exposer"
+	"github.com/service-exposer/exposer/listener/utils"
+	"github.com/service-exposer/exposer/protocal/forward"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +42,27 @@ func init() {
 	forwardCmd.Flags().StringVarP(&server_url, "server-url", "s", server_url, "server url")
 	forwardCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
 	forwardCmd.Run = func(cmd *cobra.Command, args []string) {
+		ln, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", local_port))
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "listen", fmt.Sprintf("0.0.0.0:%d", local_port), "failure", err)
+			os.Exit(-2)
+		}
+		defer ln.Close()
 
-		fmt.Println("key:", key)
+		conn, err := utils.DialWebsocket(server_url)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "dial server", server_url, "failure", err)
+		}
+		defer conn.Close()
+
+		proto := exposer.NewProtocal(conn)
+		proto.On = forward.ClientSide(forward.Forward{
+			Network: "tcp",
+			Address: forward_addr,
+		}, ln)
+
+		proto.Request(forward.CMD_AUTH, &forward.Auth{
+			Key: key,
+		})
 	}
 }
