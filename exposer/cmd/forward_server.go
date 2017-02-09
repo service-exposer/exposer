@@ -20,22 +20,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	addr     = "0.0.0.0:9000"
-	key      = ""
-	protocal = "ws"
-)
-
 // forward_serverCmd represents the forward-server command
 var forward_serverCmd = &cobra.Command{
 	Use:   "forward-server",
 	Short: "A server for forwarding network traffic",
 	Long: `forward and forward-server are a pair for forwarding network traffic
 via websocket protocal. So it can through 80 or 443 port via HTTP(s) protocal.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: Work your own magic here
-		fmt.Println("forward-server called")
-	},
 }
 
 func init() {
@@ -50,8 +40,16 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// forward_serverCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	var (
+		addr     = "0.0.0.0:9000"
+		key      = ""
+		protocal = "ws"
+	)
 	forward_serverCmd.Flags().StringVarP(&addr, "addr", "a", addr, "listen address")
 	forward_serverCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
 	forward_serverCmd.Flags().StringVarP(&protocal, "protocal", "", protocal, "selected protocal")
 
+	forward_serverCmd.Run = func(cmd *cobra.Command, args []string) {
+		fmt.Println("key:", key)
+	}
 }
