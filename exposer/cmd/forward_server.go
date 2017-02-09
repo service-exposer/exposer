@@ -20,6 +20,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	addr     = "0.0.0.0:9000"
+	key      = ""
+	protocal = "ws"
+)
+
 // forward_serverCmd represents the forward-server command
 var forward_serverCmd = &cobra.Command{
 	Use:   "forward-server",
@@ -44,5 +50,8 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// forward_serverCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	forward_serverCmd.Flags().StringVarP(&addr, "addr", "a", addr, "listen address")
+	forward_serverCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
+	forward_serverCmd.Flags().StringVarP(&protocal, "protocal", "", protocal, "selected protocal")
 
 }
