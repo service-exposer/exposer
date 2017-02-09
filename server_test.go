@@ -81,4 +81,10 @@ func TestServe(t *testing.T) {
 	case <-time.After(time.Second * 1):
 		t.Fatal("timeout")
 	}
+
+	ln.Close()
+	_, err = conn.Write([]byte(""))
+	if err == nil {
+		t.Fatal("expect err")
+	}
 }
