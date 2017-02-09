@@ -9,13 +9,14 @@ import (
 	"github.com/inconshreveable/muxado"
 )
 
+type HandshakeHandleFunc func(proto *Protocal, cmd string, details []byte) error
 type Protocal struct {
 	conn             net.Conn
 	isHandshakeDone  bool
 	handshakeDecoder *json.Decoder
 
 	// handle handshake
-	On func(proto *Protocal, cmd string, details []byte) error
+	On HandshakeHandleFunc
 }
 
 func NewProtocal(conn net.Conn) *Protocal {
