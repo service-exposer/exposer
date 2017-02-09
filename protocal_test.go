@@ -2,6 +2,7 @@ package exposer
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"reflect"
@@ -83,6 +84,36 @@ func TestProtocal_Forword(t *testing.T) {
 		go proto_c.Forward(c2)
 
 		c1.Write([]byte("test"))
+		c1.Close()
+
+		data, err := ioutil.ReadAll(c3)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if string(data) != "test" {
+			t.Fatal("expect", "test", "got", string(data))
+		}
+	}()
+
+	func() { // design usage
+		c, c1 := net.Pipe()
+		c2, c3 := net.Pipe()
+		defer c.Close()
+
+		proto := NewProtocal(c)
+		proto.On = func(proto *Protocal, cmd string, details []byte) error {
+			switch cmd {
+			case "forward":
+				fmt.Println("ok 1")
+				proto.Forward(c2)
+			}
+			return nil
+		}
+
+		go proto.Handle()
+
+		c1.Write([]byte(`{"cmd":"forward","details":null}test`))
 		c1.Close()
 
 		data, err := ioutil.ReadAll(c3)
