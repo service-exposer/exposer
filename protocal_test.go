@@ -2,6 +2,7 @@ package exposer
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net"
 	"reflect"
 	"testing"
@@ -66,4 +67,31 @@ func TestProtocal_Reply(t *testing.T) {
 			t.Fatal("expect err")
 		}
 	}
+}
+
+func TestProtocal_Forword(t *testing.T) {
+	func() { // normal
+		c, c1 := net.Pipe()
+		c2, c3 := net.Pipe()
+		defer c.Close()
+		defer c2.Close()
+
+		proto_c := NewProtocal(c)
+
+		//defer c1.Close()
+
+		go proto_c.Forward(c2)
+
+		c1.Write([]byte("test"))
+		c1.Close()
+
+		data, err := ioutil.ReadAll(c3)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if string(data) != "test" {
+			t.Fatal("expect", "test", "got", string(data))
+		}
+	}()
 }

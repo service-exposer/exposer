@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net"
+	"os"
 	"sync"
 
 	"github.com/inconshreveable/muxado"
@@ -72,14 +73,16 @@ func (proto *Protocal) Forward(conn net.Conn) {
 
 	go func() {
 		defer wg.Done()
-		io.Copy(conn, io.MultiReader(proto.handshakeDecoder.Buffered(), proto.conn))
+		defer conn.Close()
+		io.Copy(conn, io.TeeReader(io.MultiReader(proto.handshakeDecoder.Buffered(), proto.conn), os.Stdout))
 	}()
 
 	go func() {
 		defer wg.Done()
-		io.Copy(proto.conn, conn)
+		defer proto.conn.Close()
+		io.Copy(proto.conn, io.TeeReader(conn, os.Stdout))
 	}()
-	wg.Done()
+	wg.Wait()
 }
 
 func (proto *Protocal) Request(cmd string, details interface{}) {
