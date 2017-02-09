@@ -1,4 +1,4 @@
-package exposer
+package listener
 
 import (
 	"errors"
@@ -13,7 +13,7 @@ type pipeListener struct {
 	closed  bool
 }
 
-func NewPipeListener() (ln net.Listener, dial func() (net.Conn, error)) {
+func Pipe() (ln net.Listener, dial func() (net.Conn, error)) {
 	pipeln := &pipeListener{
 		Mutex:   &sync.Mutex{},
 		accepts: make(chan net.Conn, 2),

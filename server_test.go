@@ -5,6 +5,8 @@ import (
 	"net"
 	"testing"
 	"time"
+
+	"github.com/service-exposer/exposer/listener"
 )
 
 func TestServe(t *testing.T) {
@@ -20,7 +22,7 @@ func TestServe(t *testing.T) {
 		Message string
 	}
 
-	ln, dial := NewPipeListener()
+	ln, dial := listener.Pipe()
 	go Serve(ln, func(conn net.Conn) ProtocalHandler {
 		proto := NewProtocal(conn)
 		proto.On = func(proto *Protocal, cmd string, details []byte) error {
