@@ -6,6 +6,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	forward_addr = ""
+	local_port   = 0
+	server_url   = ""
+)
+
 // forwardCmd represents the forward command
 var forwardCmd = &cobra.Command{
 	Use:   "forward",
@@ -31,4 +37,7 @@ func init() {
 	// is called directly, e.g.:
 	// forwardCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
+	forwardCmd.Flags().IntVarP(&local_port, "local-port", "l", 7000, "local port")
+	forwardCmd.Flags().StringVarP(&forward_addr, "forward-addr", "f", "", "forward address")
+	forwardCmd.Flags().StringVarP(&server_url, "server-url", "s", "", "server url")
 }
