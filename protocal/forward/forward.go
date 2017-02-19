@@ -3,7 +3,6 @@ package forward
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net"
 
 	"github.com/service-exposer/exposer"
@@ -126,7 +125,6 @@ func ServerSide(authFn func(string) bool) exposer.HandshakeHandleFunc {
 						return err
 					}
 
-					fmt.Println("forward to", forward.Address)
 					proto.Forward(conn)
 					return nil
 				}
