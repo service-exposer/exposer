@@ -3,6 +3,7 @@ package exposer
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -357,5 +358,29 @@ func TestProtocal_Multiplex(t *testing.T) {
 		}
 
 		proto_c.Request("multiplex", nil)
+	}()
+}
+
+func TestProtocal_Emit(t *testing.T) {
+	func() {
+		c, _ := net.Pipe()
+		proto := NewProtocal(c)
+		const (
+			EVENT_TIMEOUT = "event:timeout"
+		)
+		proto.On = func(proto *Protocal, cmd string, details []byte) error {
+			switch cmd {
+			case EVENT_TIMEOUT:
+				fmt.Println("timeout")
+			}
+			return errors.New("unknow cmd:" + cmd)
+		}
+		go proto.Handle()
+
+		err := proto.Emit(EVENT_TIMEOUT, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(100 * time.Millisecond)
 	}()
 }

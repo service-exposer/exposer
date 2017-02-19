@@ -2,6 +2,7 @@ package exposer
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"sync"
@@ -14,9 +15,11 @@ type Protocal struct {
 	conn             net.Conn
 	isHandshakeDone  bool
 	handshakeDecoder *json.Decoder
+	eventbus         chan HandshakeIncoming
 
 	// handle handshake
-	On HandshakeHandleFunc
+	mutex_On *sync.Mutex
+	On       HandshakeHandleFunc
 }
 
 func NewProtocal(conn net.Conn) *Protocal {
@@ -24,6 +27,8 @@ func NewProtocal(conn net.Conn) *Protocal {
 		conn:             conn,
 		isHandshakeDone:  false,
 		handshakeDecoder: json.NewDecoder(conn),
+		eventbus:         make(chan HandshakeIncoming),
+		mutex_On:         new(sync.Mutex),
 	}
 }
 
@@ -101,12 +106,53 @@ func (proto *Protocal) Request(cmd string, details interface{}) {
 	proto.Handle()
 }
 
+func (proto *Protocal) Emit(event string, details interface{}) (err error) {
+	var data []byte
+	data, err = json.Marshal(&HandshakeOutgoing{
+		Command: event,
+		Details: details,
+	})
+	if err != nil {
+		return err
+	}
+
+	var handshake HandshakeIncoming
+	err = json.Unmarshal(data, &handshake)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.New("conn closed")
+		}
+	}()
+	proto.eventbus <- handshake
+	return nil
+}
+
 func (proto *Protocal) Handle() {
 	defer proto.conn.Close()
+	defer close(proto.eventbus)
 
 	if proto.On == nil {
 		panic("not set Protocal.On")
 	}
+
+	go func() {
+		defer proto.conn.Close()
+
+		for handshake := range proto.eventbus {
+			err := func() error {
+				proto.mutex_On.Lock()
+				defer proto.mutex_On.Unlock()
+				return proto.On(proto, handshake.Command, handshake.Details)
+			}()
+			if err != nil {
+				return
+			}
+		}
+	}()
 
 	var handshake HandshakeIncoming
 	for !proto.isHandshakeDone {
@@ -116,7 +162,11 @@ func (proto *Protocal) Handle() {
 			return
 		}
 
-		err = proto.On(proto, handshake.Command, handshake.Details)
+		err = func() error {
+			proto.mutex_On.Lock()
+			defer proto.mutex_On.Unlock()
+			return proto.On(proto, handshake.Command, handshake.Details)
+		}()
 		if err != nil {
 			// TODO: handle error
 			return
