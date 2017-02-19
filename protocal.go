@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"os"
 	"sync"
 
 	"github.com/inconshreveable/muxado"
@@ -82,13 +81,13 @@ func (proto *Protocal) Forward(conn net.Conn) {
 	go func() {
 		defer wg.Done()
 		defer conn.Close()
-		io.Copy(conn, io.TeeReader(io.MultiReader(proto.handshakeDecoder.Buffered(), proto.conn), os.Stdout))
+		io.Copy(conn, io.MultiReader(proto.handshakeDecoder.Buffered(), proto.conn))
 	}()
 
 	go func() {
 		defer wg.Done()
 		defer proto.conn.Close()
-		io.Copy(proto.conn, io.TeeReader(conn, os.Stdout))
+		io.Copy(proto.conn, conn)
 	}()
 	wg.Wait()
 }

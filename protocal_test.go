@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
-	"os"
 	"reflect"
 	"sync"
 	"testing"
@@ -304,7 +303,7 @@ func TestProtocal_Multiplex(t *testing.T) {
 					go func(conn net.Conn) { // echo service
 						defer conn.Close()
 
-						io.Copy(conn, io.TeeReader(conn, os.Stdout))
+						io.Copy(conn, conn)
 					}(conn)
 				}
 			}

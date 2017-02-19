@@ -198,7 +198,7 @@ func ClientSide(forward Forward, ln net.Listener) exposer.HandshakeHandleFunc {
 						wg.Add(2)
 						go func() {
 							defer wg.Done()
-							io.Copy(local_conn, io.TeeReader(remote_conn, os.Stdout))
+							io.Copy(local_conn, remote_conn)
 						}()
 
 						go func() {
