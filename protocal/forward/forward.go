@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 
 	"github.com/service-exposer/exposer"
@@ -33,7 +32,6 @@ type Forward struct {
 
 func ServerSide(authFn func(string) bool) exposer.HandshakeHandleFunc {
 	return func(proto *exposer.Protocal, cmd string, details []byte) error {
-		log.Print("server side cmd", cmd)
 		switch cmd {
 		case CMD_AUTH:
 			var auth Auth
@@ -88,16 +86,13 @@ func ServerSide(authFn func(string) bool) exposer.HandshakeHandleFunc {
 				for {
 					local_conn, err := ln.Accept()
 					if err != nil {
-						log.Print("server session listener.Accept() err ", err)
 						return err
 					}
 					defer local_conn.Close()
 
-					log.Print("client new local conn ")
 
 					remote_conn, err := net.Dial(forward.Network, forward.Address)
 					if err != nil {
-						log.Print("server remote session.Open() err ", err)
 						return err
 					}
 					defer remote_conn.Close()
@@ -121,7 +116,6 @@ func ServerSide(authFn func(string) bool) exposer.HandshakeHandleFunc {
 			exposer.Serve(proto.Multiplex(false), func(conn net.Conn) exposer.ProtocalHandler {
 				proto := exposer.NewProtocal(conn)
 				proto.On = func(proto *exposer.Protocal, cmd string, details []byte) error {
-					log.Print("server side :forward ", cmd)
 					err := proto.Reply("", nil)
 					if err != nil {
 						return err
@@ -147,7 +141,6 @@ func ServerSide(authFn func(string) bool) exposer.HandshakeHandleFunc {
 
 func ClientSide(forward Forward, ln net.Listener) exposer.HandshakeHandleFunc {
 	return func(proto *exposer.Protocal, cmd string, details []byte) error {
-		log.Print("client side ", cmd)
 		switch cmd {
 		case CMD_AUTH_REPLY:
 			var reply Reply
@@ -178,19 +171,13 @@ func ClientSide(forward Forward, ln net.Listener) exposer.HandshakeHandleFunc {
 			for {
 				local_conn, err := ln.Accept()
 				if err != nil {
-					log.Print("client local listener.Accept() err ", err)
 					return err
 				}
-
-				log.Print("client new local conn ", local_conn)
 
 				remote_conn, err := session.Open()
 				if err != nil {
-					log.Print("client remote session.Open() err ", err)
 					return err
 				}
-
-				log.Print("client new session conn")
 
 				/*
 					go func() {
@@ -211,8 +198,6 @@ func ClientSide(forward Forward, ln net.Listener) exposer.HandshakeHandleFunc {
 
 				proto_forward := exposer.NewProtocal(remote_conn)
 				proto_forward.On = func(proto *exposer.Protocal, cmd string, details []byte) error {
-					log.Println("client side :forward ", cmd)
-					log.Println("client new conn")
 					proto.Forward(local_conn)
 					return nil
 				}

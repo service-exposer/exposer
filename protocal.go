@@ -3,7 +3,6 @@ package exposer
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"net"
 	"sync"
 
@@ -95,12 +94,10 @@ func (proto *Protocal) Forward(conn net.Conn) {
 func (proto *Protocal) Request(cmd string, details interface{}) {
 	err := proto.Reply(cmd, details)
 	if err != nil {
-		log.Print(".Request ", cmd, " ", err)
 		proto.conn.Close()
 		return
 	}
 
-	log.Println("start .Handle ", cmd)
 	proto.Handle()
 }
 

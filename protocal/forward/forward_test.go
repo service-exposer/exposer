@@ -2,7 +2,6 @@ package forward
 
 import (
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"testing"
@@ -41,7 +40,6 @@ func TestForward(t *testing.T) {
 	go http.Serve(remote_ln, nil)
 
 	time.Sleep(time.Second)
-	log.Print("remote server")
 
 	// forward server
 	forward_ws_ln, err := utils.WebsocketListener("tcp", forward_ws_addr)
@@ -57,7 +55,6 @@ func TestForward(t *testing.T) {
 		return proto
 	})
 	time.Sleep(time.Second)
-	log.Print("forward server")
 
 	// local listen
 	local_ln, err := net.Listen("tcp", local_addr)
