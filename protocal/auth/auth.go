@@ -23,7 +23,7 @@ type AuthReq struct {
 	Key string
 }
 
-func ServerSide(authFn func(key string) (allow bool)) exposer.HandshakeHandleFunc {
+func ServerSide(router *service.Router, authFn func(key string) (allow bool)) exposer.HandshakeHandleFunc {
 	return func(proto *exposer.Protocal, cmd string, details []byte) error {
 		switch cmd {
 		case CMD_AUTH:
@@ -50,7 +50,6 @@ func ServerSide(authFn func(key string) (allow bool)) exposer.HandshakeHandleFun
 				return err
 			}
 
-			router := service.NewRouter()
 			session := proto.Multiplex(false)
 			for {
 				conn, err := session.Accept()

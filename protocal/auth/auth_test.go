@@ -9,6 +9,7 @@ import (
 	"github.com/service-exposer/exposer/listener"
 	"github.com/service-exposer/exposer/protocal/keepalive"
 	"github.com/service-exposer/exposer/protocal/route"
+	"github.com/service-exposer/exposer/service"
 )
 
 func Test_auth(t *testing.T) {
@@ -18,7 +19,7 @@ func Test_auth(t *testing.T) {
 
 	go exposer.Serve(ln, func(conn net.Conn) exposer.ProtocalHandler {
 		proto := exposer.NewProtocal(conn)
-		proto.On = ServerSide(func(key string) bool {
+		proto.On = ServerSide(service.NewRouter(), func(key string) bool {
 			auth := key == "test"
 			authRes <- auth
 			return auth
