@@ -23,48 +23,61 @@ import (
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener/utils"
 	"github.com/service-exposer/exposer/protocal/auth"
-	"github.com/service-exposer/exposer/protocal/expose"
 	"github.com/service-exposer/exposer/protocal/keepalive"
+	"github.com/service-exposer/exposer/protocal/link"
 	"github.com/service-exposer/exposer/protocal/route"
 	"github.com/spf13/cobra"
 )
 
-// exposeCmd represents the expose command
-var exposeCmd = &cobra.Command{
-	Use:   "expose",
-	Short: "expose  service via daemon",
+// linkCmd represents the link command
+var linkCmd = &cobra.Command{Use: "link",
+	Short: "link service via daemon",
 }
 
 func init() {
-	RootCmd.AddCommand(exposeCmd)
+	RootCmd.AddCommand(linkCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// exposeCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// linkCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// exposeCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// linkCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	var (
 		service_name = ""
-		service_addr = "" // [host]:port
+		listen_addr  = "" // [host]:port
 		server_url   = ""
 		key          = ""
 	)
-	exposeCmd.Flags().StringVarP(&service_name, "name", "n", service_name, "service name")
-	exposeCmd.Flags().StringVarP(&service_addr, "addr", "a", service_addr, "service address format: [host]:port")
-	exposeCmd.Flags().StringVarP(&server_url, "server-url", "s", server_url, "server url")
-	exposeCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
-	exposeCmd.Run = func(cmd *cobra.Command, args []string) {
+	linkCmd.Flags().StringVarP(&service_name, "name", "n", service_name, "service name")
+	linkCmd.Flags().StringVarP(&listen_addr, "listen", "l", listen_addr, "listen address. format: [host]:port")
+	linkCmd.Flags().StringVarP(&server_url, "server-url", "s", server_url, "server url")
+	linkCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
+
+	linkCmd.Run = func(cmd *cobra.Command, args []string) {
+		exit := func(code int, outs ...interface{}) {
+			fmt.Fprintln(os.Stderr, outs...)
+			os.Exit(code)
+		}
+
 		if service_name == "" {
 			exit(1, "not set service name")
 		}
 
-		if service_addr == "" {
-			exit(2, "not set service address")
+		if listen_addr == "" {
+			exit(2, "not set listen address")
 		}
+
+		log.Print("listen ", listen_addr)
+		ln, err := net.Listen("tcp", listen_addr)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "listen", listen_addr, "failure", err)
+			os.Exit(-2)
+		}
+		defer ln.Close()
 
 		log.Print("connect to server ", server_url)
 		conn, err := utils.DialWebsocket(server_url)
@@ -88,23 +101,21 @@ func init() {
 			}
 			log.Print("setup keepalive route")
 
-			handleFn := expose.ClientSide(func() (net.Conn, error) {
-				return net.Dial("tcp", service_addr)
-			})
+			handleFn := link.ClientSide(ln)
 			nextRoutes <- auth.NextRoute{
 				Req: route.RouteReq{
-					Type: route.Expose,
+					Type: route.Link,
 				},
 				HandleFunc: func(proto *exposer.Protocal, cmd string, details []byte) error {
 					log.Print("link:", cmd, string(details))
 					return handleFn(proto, cmd, details)
 				},
-				Cmd: expose.CMD_EXPOSE,
-				Details: &expose.ExposeReq{
+				Cmd: link.CMD_LINK,
+				Details: &link.LinkReq{
 					Name: service_name,
 				},
 			}
-			log.Print("setup expose route")
+			log.Print("setup link route")
 		}()
 
 		proto.Request(auth.CMD_AUTH, &auth.AuthReq{
@@ -112,9 +123,4 @@ func init() {
 		})
 
 	}
-}
-
-func exit(code int, outs ...interface{}) {
-	fmt.Fprintln(os.Stderr, outs...)
-	os.Exit(code)
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener/utils"
 	"github.com/service-exposer/exposer/protocal/auth"
+	"github.com/service-exposer/exposer/service"
 	"github.com/spf13/cobra"
 )
 
@@ -67,9 +68,10 @@ func init() {
 		}
 		defer ln.Close()
 
+		router := service.NewRouter()
 		exposer.Serve(ln, func(conn net.Conn) exposer.ProtocalHandler {
 			proto := exposer.NewProtocal(conn)
-			proto.On = auth.ServerSide(func(k string) bool {
+			proto.On = auth.ServerSide(router, func(k string) bool {
 				return k == key
 			})
 			return proto
