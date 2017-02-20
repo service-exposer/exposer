@@ -9,6 +9,7 @@ import (
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener"
 	"github.com/service-exposer/exposer/protocal/expose"
+	"github.com/service-exposer/exposer/protocal/forward"
 	"github.com/service-exposer/exposer/protocal/keepalive"
 	"github.com/service-exposer/exposer/protocal/link"
 )
@@ -98,6 +99,34 @@ func Test_route(t *testing.T) {
 		cmd := <-cmds
 		if cmd != link.CMD_LINK_REPLY {
 			t.Fatal("expect", link.CMD_LINK_REPLY, "got", cmd)
+		}
+	}()
+
+	func() {
+		conn, err := dial()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cmds := make(chan string)
+
+		proto := exposer.NewProtocal(conn)
+
+		ln, _ := listener.Pipe()
+		handlefn := forward.ClientSide(ln)
+
+		proto.On = ClientSide(func(proto *exposer.Protocal, cmd string, details []byte) error {
+			cmds <- cmd
+			return handlefn(proto, cmd, details)
+		}, forward.CMD_FORWARD, &forward.Forward{})
+
+		go proto.Request(CMD_ROUTE, &RouteReq{
+			Type: Forward,
+		})
+
+		cmd := <-cmds
+		if cmd != forward.CMD_FORWARD_REPLY {
+			t.Fatal("expect", forward.CMD_FORWARD_REPLY, "got", cmd)
 		}
 	}()
 }

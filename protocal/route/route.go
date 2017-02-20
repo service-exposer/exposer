@@ -7,6 +7,7 @@ import (
 
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/protocal/expose"
+	"github.com/service-exposer/exposer/protocal/forward"
 	"github.com/service-exposer/exposer/protocal/keepalive"
 	"github.com/service-exposer/exposer/protocal/link"
 	"github.com/service-exposer/exposer/service"
@@ -20,9 +21,10 @@ const (
 type Type string
 
 const (
-	KeepAlive      = "keepalive"
+	KeepAlive Type = "keepalive"
 	Expose    Type = "expose"
 	Link      Type = "link"
+	Forward   Type = "forward"
 )
 
 type Reply struct {
@@ -40,6 +42,7 @@ func ServerSide() exposer.HandshakeHandleFunc {
 	keepaliveFn := keepalive.ServerSide(0)
 	exposeFn := expose.ServerSide(router)
 	linkFn := link.ServerSide(router)
+	forwardFn := forward.ServerSide()
 
 	return func(proto *exposer.Protocal, cmd string, details []byte) error {
 		switch cmd {
@@ -78,6 +81,15 @@ func ServerSide() exposer.HandshakeHandleFunc {
 				}
 
 				proto.On = linkFn
+			case Forward:
+				err := proto.Reply(CMD_ROUTE_REPLY, &Reply{
+					OK: true,
+				})
+				if err != nil {
+					return err
+				}
+
+				proto.On = forwardFn
 			default:
 				err := errors.New(fmt.Sprint("unsupport RouteReq.Type", req.Type))
 				proto.Reply(CMD_ROUTE_REPLY, &Reply{
