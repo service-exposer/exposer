@@ -2,12 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener/utils"
+	"github.com/service-exposer/exposer/protocal/auth"
 	"github.com/service-exposer/exposer/protocal/forward"
+	"github.com/service-exposer/exposer/protocal/keepalive"
+	"github.com/service-exposer/exposer/protocal/route"
 	"github.com/spf13/cobra"
 )
 
@@ -42,6 +46,7 @@ func init() {
 	forwardCmd.Flags().StringVarP(&server_url, "server-url", "s", server_url, "server url")
 	forwardCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
 	forwardCmd.Run = func(cmd *cobra.Command, args []string) {
+		log.Print("listen ", local_port)
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", local_port))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "listen", fmt.Sprintf(":%d", local_port), "failure", err)
@@ -49,6 +54,7 @@ func init() {
 		}
 		defer ln.Close()
 
+		log.Print("connect to server ", server_url)
 		conn, err := utils.DialWebsocket(server_url)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "dial server", server_url, "failure", err)
@@ -56,12 +62,36 @@ func init() {
 		}
 		defer conn.Close()
 
+		nextRoutes := make(chan auth.NextRoute)
 		proto := exposer.NewProtocal(conn)
-		proto.On = forward.ClientSide(ln)
+		proto.On = auth.ClientSide(nextRoutes)
 
-		proto.Request(forward.CMD_FORWARD, &forward.Forward{
-			Network: "tcp",
-			Address: forward_addr,
+		go func() {
+			nextRoutes <- auth.NextRoute{
+				Req: route.RouteReq{
+					Type: route.KeepAlive,
+				},
+				HandleFunc: keepalive.ClientSide(0),
+				Cmd:        keepalive.CMD_PING,
+			}
+			log.Print("setup keepalive route")
+
+			nextRoutes <- auth.NextRoute{
+				Req: route.RouteReq{
+					Type: route.Forward,
+				},
+				HandleFunc: forward.ClientSide(ln),
+				Cmd:        forward.CMD_FORWARD,
+				Details: &forward.Forward{
+					Network: "tcp",
+					Address: forward_addr,
+				},
+			}
+			log.Print("setup forward route")
+		}()
+
+		proto.Request(auth.CMD_AUTH, &auth.AuthReq{
+			Key: key,
 		})
 	}
 }
