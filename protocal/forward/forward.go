@@ -9,8 +9,6 @@ import (
 )
 
 const (
-	CMD_AUTH          = "auth"
-	CMD_AUTH_REPLY    = "auth:reply"
 	CMD_FORWARD       = "forward"
 	CMD_FORWARD_REPLY = "forward:reply"
 )
@@ -20,40 +18,14 @@ type Reply struct {
 	Err string
 }
 
-type Auth struct {
-	Key string
-}
-
 type Forward struct {
 	Network string
 	Address string
 }
 
-func ServerSide(authFn func(string) bool) exposer.HandshakeHandleFunc {
+func ServerSide() exposer.HandshakeHandleFunc {
 	return func(proto *exposer.Protocal, cmd string, details []byte) error {
 		switch cmd {
-		case CMD_AUTH:
-			var auth Auth
-			err := json.Unmarshal(details, &auth)
-			if err != nil {
-				return err
-			}
-
-			if authFn(auth.Key) == true {
-				return proto.Reply(CMD_AUTH_REPLY, &Reply{
-					OK: true,
-				})
-			}
-
-			err = proto.Reply(CMD_AUTH_REPLY, &Reply{
-				OK:  false,
-				Err: "auth failure",
-			})
-			if err != nil {
-				return err
-			}
-
-			return errors.New("auth failure")
 		case CMD_FORWARD:
 			var forward Forward
 			err := json.Unmarshal(details, &forward)
@@ -137,21 +109,9 @@ func ServerSide(authFn func(string) bool) exposer.HandshakeHandleFunc {
 
 }
 
-func ClientSide(forward Forward, ln net.Listener) exposer.HandshakeHandleFunc {
+func ClientSide(ln net.Listener) exposer.HandshakeHandleFunc {
 	return func(proto *exposer.Protocal, cmd string, details []byte) error {
 		switch cmd {
-		case CMD_AUTH_REPLY:
-			var reply Reply
-			err := json.Unmarshal(details, &reply)
-			if err != nil {
-				return err
-			}
-
-			if !reply.OK {
-				return errors.New(reply.Err)
-			}
-
-			return proto.Reply(CMD_FORWARD, &forward)
 		case CMD_FORWARD_REPLY:
 
 			var reply Reply

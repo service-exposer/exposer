@@ -12,11 +12,6 @@ import (
 )
 
 func TestForward(t *testing.T) {
-	authFn := func(k string) bool {
-		return true
-	}
-	authFn("")
-
 	const (
 		MESSAGE = "hello world"
 	)
@@ -51,7 +46,7 @@ func TestForward(t *testing.T) {
 
 	go exposer.Serve(forward_ws_ln, func(conn net.Conn) exposer.ProtocalHandler {
 		proto := exposer.NewProtocal(conn)
-		proto.On = ServerSide(authFn)
+		proto.On = ServerSide()
 		return proto
 	})
 	time.Sleep(time.Second)
@@ -71,13 +66,11 @@ func TestForward(t *testing.T) {
 	defer conn.Close()
 
 	proto := exposer.NewProtocal(conn)
-	proto.On = ClientSide(Forward{
+	proto.On = ClientSide(local_ln)
+
+	go proto.Request(CMD_FORWARD, &Forward{
 		Network: "tcp",
 		Address: remote_addr,
-	}, local_ln)
-
-	go proto.Request(CMD_AUTH, &Auth{
-		Key: "",
 	})
 
 	time.Sleep(1 * time.Second)

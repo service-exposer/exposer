@@ -71,9 +71,7 @@ func init() {
 		log.Print("serve")
 		exposer.Serve(ln, func(conn net.Conn) exposer.ProtocalHandler {
 			proto := exposer.NewProtocal(conn)
-			proto.On = forward.ServerSide(func(k string) bool {
-				return k == key
-			})
+			proto.On = forward.ServerSide()
 			return proto
 		})
 	}

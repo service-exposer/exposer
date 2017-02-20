@@ -57,13 +57,11 @@ func init() {
 		defer conn.Close()
 
 		proto := exposer.NewProtocal(conn)
-		proto.On = forward.ClientSide(forward.Forward{
+		proto.On = forward.ClientSide(ln)
+
+		proto.Request(forward.CMD_FORWARD, &forward.Forward{
 			Network: "tcp",
 			Address: forward_addr,
-		}, ln)
-
-		proto.Request(forward.CMD_AUTH, &forward.Auth{
-			Key: key,
 		})
 	}
 }
