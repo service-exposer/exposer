@@ -6,6 +6,7 @@ import (
 
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/protocal/route"
+	"github.com/service-exposer/exposer/service"
 )
 
 const (
@@ -49,6 +50,7 @@ func ServerSide(authFn func(key string) (allow bool)) exposer.HandshakeHandleFun
 				return err
 			}
 
+			router := service.NewRouter()
 			session := proto.Multiplex(false)
 			for {
 				conn, err := session.Accept()
@@ -57,7 +59,7 @@ func ServerSide(authFn func(key string) (allow bool)) exposer.HandshakeHandleFun
 				}
 
 				proto_next := exposer.NewProtocal(conn)
-				proto_next.On = route.ServerSide()
+				proto_next.On = route.ServerSide(router)
 				go proto_next.Handle()
 			}
 

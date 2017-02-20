@@ -12,6 +12,7 @@ import (
 	"github.com/service-exposer/exposer/protocal/forward"
 	"github.com/service-exposer/exposer/protocal/keepalive"
 	"github.com/service-exposer/exposer/protocal/link"
+	"github.com/service-exposer/exposer/service"
 )
 
 func Test_route(t *testing.T) {
@@ -19,7 +20,7 @@ func Test_route(t *testing.T) {
 
 	go exposer.Serve(ln, func(conn net.Conn) exposer.ProtocalHandler {
 		proto := exposer.NewProtocal(conn)
-		proto.On = ServerSide()
+		proto.On = ServerSide(service.NewRouter())
 		return proto
 	})
 

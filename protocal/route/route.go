@@ -36,9 +36,7 @@ type RouteReq struct {
 	Type Type
 }
 
-func ServerSide() exposer.HandshakeHandleFunc {
-	router := service.NewRouter()
-
+func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 	keepaliveFn := keepalive.ServerSide(0)
 	exposeFn := expose.ServerSide(router)
 	linkFn := link.ServerSide(router)
