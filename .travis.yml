@@ -3,6 +3,7 @@ go:
         - 1.5.x
         - 1.6.x
         - 1.7.x
+        - 1.8.x
         - 1.x
         - tip
 
@@ -11,4 +12,4 @@ before_install:
 
 script:
         - go test -v ./...
-        - $HOME/gopath/bin/goveralls -service=travis-ci
+        - $HOME/gopath/bin/goveralls -service=travis-ci -v
