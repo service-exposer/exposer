@@ -24,37 +24,28 @@ var dialer = websocket.Dialer{
 	HandshakeTimeout: 15 * time.Second,
 }
 
-func WebsocketListener(network, addr string) (net.Listener, error) {
-	ln, err := net.Listen(network, addr)
-	if err != nil {
-		return nil, err
-	}
-
-	mutex := &sync.Mutex{}
+func WebsocketHandlerListener(addr net.Addr) (net.Listener, http.Handler, error) {
+	var (
+		mutex  = new(sync.Mutex)
+		closed = false
+	)
 	accepts := make(chan *websocket.Conn)
-	closed := false
 
-	server := http.Server{
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ws, err := upgrader.Upgrade(w, r, nil)
-			if err != nil {
-				w.WriteHeader(500)
-				return
-			}
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ws, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
 
-			mutex.Lock()
-			defer mutex.Unlock()
+		mutex.Lock()
+		defer mutex.Unlock()
 
-			if closed {
-				w.WriteHeader(500)
-				return
-			}
+		if closed {
+			return
+		}
 
-			accepts <- ws
-		}),
-	}
+		accepts <- ws
+	})
 
 	closeFn := func() error {
 		mutex.Lock()
@@ -63,18 +54,35 @@ func WebsocketListener(network, addr string) (net.Listener, error) {
 		if !closed {
 			close(accepts)
 			closed = true
-			ln.Close()
 		}
 
 		return nil
 	}
 
+	return listener.Websocket(accepts, closeFn, addr), handler, nil
+}
+func WebsocketListener(network, addr string) (net.Listener, error) {
+	ln, err := net.Listen(network, addr)
+	if err != nil {
+		return nil, err
+	}
+
+	wsln, handler, err := WebsocketHandlerListener(ln.Addr())
+	if err != nil {
+		return nil, err
+	}
+
+	server := http.Server{
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		Handler:      handler,
+	}
+
 	go func() {
 		server.Serve(ln)
-		closeFn()
 	}()
 
-	return listener.Websocket(accepts, closeFn, ln.Addr()), nil
+	return wsln, nil
 }
 
 func DialWebsocket(url string) (net.Conn, error) {
