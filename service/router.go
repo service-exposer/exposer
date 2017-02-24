@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"net"
+	"sort"
 	"sync"
 )
 
@@ -80,4 +81,24 @@ func (r *Router) Remove(name string) {
 	if service != nil && service.closeFn != nil {
 		service.Close()
 	}
+}
+
+func (r *Router) All() []*Service {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	keys := make([]string, 0, len(r.routes))
+	for k, _ := range r.routes {
+		keys = append(keys, k)
+	}
+
+	sort.Strings(keys)
+
+	services := make([]*Service, 0, len(keys))
+
+	for _, k := range keys {
+		services = append(services, r.routes[k])
+	}
+
+	return services
 }

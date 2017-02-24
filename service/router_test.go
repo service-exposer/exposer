@@ -153,3 +153,30 @@ func TestRouter_Remove(t *testing.T) {
 
 	r.Remove("")
 }
+
+func TestRouter_All(t *testing.T) {
+	must := func(err error) {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	r := NewRouter()
+	must(r.Prepare("abc"))
+	must(r.Prepare("dec"))
+	must(r.Prepare("23445"))
+	must(r.Prepare("test"))
+
+	ss := r.All()
+
+	if len(ss) != 4 {
+		t.Fatal(len(ss), "want", 4)
+	}
+
+	expectNames := []string{"23445", "abc", "dec", "test"}
+	for i, s := range ss {
+		if s.Name() != expectNames[i] {
+			t.Fatal(s.Name(), "want", expectNames[i])
+		}
+	}
+
+}
