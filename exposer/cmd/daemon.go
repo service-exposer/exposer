@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -75,6 +76,26 @@ func init() {
 		serviceRouter := service.NewRouter()
 
 		r := mux.NewRouter()
+
+		r.Path("/api/services").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			services := serviceRouter.All()
+
+			result := make(map[string]json.RawMessage)
+			for _, s := range services {
+				s.Attribute().View(func(attr *service.Attribute) error {
+					data, err := json.Marshal(attr)
+					if err != nil {
+						return err
+					}
+
+					result[s.Name()] = json.RawMessage(data)
+					return nil
+				})
+			}
+
+			json.NewEncoder(w).Encode(&result)
+
+		}).Methods("GET")
 		n := negroni.New()
 
 		// ws
