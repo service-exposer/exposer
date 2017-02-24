@@ -8,7 +8,7 @@ import (
 )
 
 func TestAttribute_View(t *testing.T) {
-	attr := NewAttribute()
+	attr := newAttribute()
 	err := attr.View(func(attr *Attribute) error {
 		if attr.HTTP.Is != false {
 			t.Fatal("want", false)
@@ -33,7 +33,7 @@ func TestAttribute_View(t *testing.T) {
 }
 
 func TestAttribute_Update(t *testing.T) {
-	attr := NewAttribute()
+	attr := newAttribute()
 	err := attr.Update(func(attr *Attribute) error {
 		return nil
 	})
@@ -69,7 +69,7 @@ func TestAttribute_Update(t *testing.T) {
 }
 
 func TestAttribute_UpdateAndView(t *testing.T) {
-	attr := NewAttribute()
+	attr := newAttribute()
 	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*200)
 	go func() {
 		for {

@@ -10,7 +10,7 @@ type Attribute struct {
 	}
 }
 
-func NewAttribute() *Attribute {
+func newAttribute() *Attribute {
 	return &Attribute{
 		mu: new(sync.RWMutex),
 	}

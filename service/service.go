@@ -19,7 +19,7 @@ type Service struct {
 func newService(name string) *Service {
 	return &Service{
 		name:             name,
-		attr:             NewAttribute(),
+		attr:             newAttribute(),
 		setOpenFuncOnce:  new(sync.Once),
 		openFn:           nil,
 		setCloseFuncOnce: new(sync.Once),
