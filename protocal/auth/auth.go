@@ -92,12 +92,13 @@ func ClientSide(routes <-chan NextRoute) exposer.HandshakeHandleFunc {
 
 			session := proto.Multiplex(true)
 
-			for r := range routes {
+			for nr := range routes {
 				conn, err := session.Open()
 				if err != nil {
 					return err
 				}
 
+				r := nr
 				proto_next := exposer.NewProtocal(conn)
 				proto_next.On = route.ClientSide(r.HandleFunc, r.Cmd, r.Details)
 				go proto_next.Request(route.CMD_ROUTE, &r.Req)
