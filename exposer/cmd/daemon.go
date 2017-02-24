@@ -15,8 +15,10 @@
 package cmd
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -96,6 +98,73 @@ func init() {
 			json.NewEncoder(w).Encode(&result)
 
 		}).Methods("GET")
+
+		r.PathPrefix("/service/{name}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			vars := mux.Vars(r)
+			var (
+				name      = vars["name"]
+				HTTP_is   = false
+				HTTP_host = ""
+			)
+
+			if !HTTP_is {
+				http.Error(w, "service is not a HTTP service", 404)
+				return
+			}
+
+			s := serviceRouter.Get(name)
+			if s == nil {
+				http.Error(w, "service is not exist", 404)
+				return
+			}
+
+			s.Attribute().View(func(attr *service.Attribute) error {
+				HTTP_is = attr.HTTP.Is
+				HTTP_host = attr.HTTP.Host
+				return nil
+			})
+
+			subPath := r.URL.Path[len("/service/"+name):]
+			if subPath == "" {
+				subPath = "/"
+			}
+
+			conn, err := s.Open()
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+
+			url, err := r.URL.Parse(subPath)
+			if err != nil {
+				panic(err)
+			}
+			r.URL = url
+			r.Close = false
+			if HTTP_host != "" {
+				r.Host = HTTP_host
+			}
+			r.Header.Set("X-Origin-IP", r.RemoteAddr)
+
+			go r.Write(conn)
+
+			resp, err := http.ReadResponse(bufio.NewReader(conn), r)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			defer resp.Body.Close()
+
+			header := w.Header()
+			for k, v := range resp.Header {
+				header[k] = v
+			}
+
+			w.WriteHeader(resp.StatusCode)
+
+			io.Copy(w, resp.Body)
+		})
+
 		n := negroni.New()
 
 		// ws
