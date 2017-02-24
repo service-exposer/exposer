@@ -160,23 +160,34 @@ func TestRouter_All(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	r := NewRouter()
-	must(r.Prepare("abc"))
-	must(r.Prepare("dec"))
-	must(r.Prepare("23445"))
-	must(r.Prepare("test"))
 
-	ss := r.All()
-
-	if len(ss) != 4 {
-		t.Fatal(len(ss), "want", 4)
-	}
-
-	expectNames := []string{"23445", "abc", "dec", "test"}
-	for i, s := range ss {
-		if s.Name() != expectNames[i] {
-			t.Fatal(s.Name(), "want", expectNames[i])
+	func() {
+		r := NewRouter()
+		ss := r.All()
+		if len(ss) != 0 {
+			t.Fatal(len(ss), "want", 0)
 		}
-	}
+	}()
 
+	func() {
+		r := NewRouter()
+		must(r.Prepare("abc"))
+		must(r.Prepare("dec"))
+		must(r.Prepare("23445"))
+		must(r.Prepare("test"))
+
+		ss := r.All()
+
+		if len(ss) != 4 {
+			t.Fatal(len(ss), "want", 4)
+		}
+
+		expectNames := []string{"23445", "abc", "dec", "test"}
+		for i, s := range ss {
+			if s.Name() != expectNames[i] {
+				t.Fatal(s.Name(), "want", expectNames[i])
+			}
+		}
+
+	}()
 }
