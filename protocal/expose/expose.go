@@ -60,7 +60,7 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 				return errors.New("Router.Add failure")
 			}
 			router.Get(req.Name).Attribute().Update(func(attr *service.Attribute) error {
-				attr.HTTP = req.Attr.HTTP
+				*attr = req.Attr
 				return nil
 			})
 			defer func() {
