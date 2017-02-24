@@ -102,15 +102,8 @@ func init() {
 		r.PathPrefix("/service/{name}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			vars := mux.Vars(r)
 			var (
-				name      = vars["name"]
-				HTTP_is   = false
-				HTTP_host = ""
+				name = vars["name"]
 			)
-
-			if !HTTP_is {
-				http.Error(w, "service is not a HTTP service", 404)
-				return
-			}
 
 			s := serviceRouter.Get(name)
 			if s == nil {
@@ -118,11 +111,21 @@ func init() {
 				return
 			}
 
+			var (
+				isHTTP    = false
+				HTTP_host = ""
+			)
+
 			s.Attribute().View(func(attr service.Attribute) error {
-				HTTP_is = attr.HTTP.Is
+				isHTTP = attr.HTTP.Is
 				HTTP_host = attr.HTTP.Host
 				return nil
 			})
+
+			if !isHTTP {
+				http.Error(w, "service is not a HTTP service", 404)
+				return
+			}
 
 			subPath := r.URL.Path[len("/service/"+name):]
 			if subPath == "" {
@@ -144,6 +147,7 @@ func init() {
 			if HTTP_host != "" {
 				r.Host = HTTP_host
 			}
+			r.Header.Set("Connection", "close")
 			r.Header.Set("X-Origin-IP", r.RemoteAddr)
 
 			go r.Write(conn)

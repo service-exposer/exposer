@@ -26,6 +26,7 @@ import (
 	"github.com/service-exposer/exposer/protocal/expose"
 	"github.com/service-exposer/exposer/protocal/keepalive"
 	"github.com/service-exposer/exposer/protocal/route"
+	"github.com/service-exposer/exposer/service"
 	"github.com/spf13/cobra"
 )
 
@@ -52,11 +53,15 @@ func init() {
 		service_addr = "" // [host]:port
 		server_url   = ""
 		key          = ""
+		is_http      = false
+		http_host    = ""
 	)
 	exposeCmd.Flags().StringVarP(&service_name, "name", "n", service_name, "service name")
 	exposeCmd.Flags().StringVarP(&service_addr, "addr", "a", service_addr, "service address format: [host]:port")
 	exposeCmd.Flags().StringVarP(&server_url, "server-url", "s", server_url, "server url")
 	exposeCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
+	exposeCmd.Flags().BoolVar(&is_http, "http", is_http, "expose service as HTTP")
+	exposeCmd.Flags().StringVar(&http_host, "http.host", "", "set HTTP host")
 	exposeCmd.Run = func(cmd *cobra.Command, args []string) {
 		if service_name == "" {
 			exit(1, "not set service name")
@@ -102,6 +107,11 @@ func init() {
 				Cmd: expose.CMD_EXPOSE,
 				Details: &expose.ExposeReq{
 					Name: service_name,
+					Attr: func() (attr service.Attribute) {
+						attr.HTTP.Is = is_http
+						attr.HTTP.Host = http_host
+						return
+					}(),
 				},
 			}
 			log.Print("setup expose route")
