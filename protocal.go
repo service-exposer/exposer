@@ -63,8 +63,15 @@ func newReadWriteCloser(buffered io.Reader, conn net.Conn) io.ReadWriteCloser {
 	}
 }
 
+var (
+	muxadoMutex = new(sync.Mutex)
+)
+
 func (proto *Protocal) Multiplex(isClient bool) muxado.Session {
 	proto.isHandshakeDone = true
+
+	muxadoMutex.Lock()
+	defer muxadoMutex.Unlock()
 
 	if isClient {
 		return muxado.Client(newReadWriteCloser(proto.handshakeDecoder.Buffered(), proto.conn), nil)
