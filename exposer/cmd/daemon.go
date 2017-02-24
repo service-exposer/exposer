@@ -18,13 +18,17 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
+	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener/utils"
 	"github.com/service-exposer/exposer/protocal/auth"
 	"github.com/service-exposer/exposer/service"
 	"github.com/spf13/cobra"
+	"github.com/urfave/negroni"
 )
 
 // daemonCmd represents the daemon command
@@ -46,32 +50,62 @@ func init() {
 	// is called directly, e.g.:
 	// daemonCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	var (
-		addr     = "0.0.0.0:9000"
-		key      = ""
-		protocal = "ws"
+		addr = "0.0.0.0:9000"
+		key  = ""
 	)
 	daemonCmd.Flags().StringVarP(&addr, "addr", "a", addr, "listen address")
 	daemonCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
-	daemonCmd.Flags().StringVarP(&protocal, "protocal", "", protocal, "selected protocal")
 
 	daemonCmd.Run = func(cmd *cobra.Command, args []string) {
-		if protocal != "ws" {
-			fmt.Fprintln(os.Stderr, "don't support protocal:", protocal)
-			os.Exit(1)
-		}
-
-		log.Print("listen ", addr)
-		ln, err := utils.WebsocketListener("tcp", addr)
+		ln, err := net.Listen("tcp", addr)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "listen", addr, "failure", err)
-			os.Exit(-2)
+			os.Exit(-1)
 		}
 		defer ln.Close()
+		log.Print("listen ", addr)
 
-		router := service.NewRouter()
-		exposer.Serve(ln, func(conn net.Conn) exposer.ProtocalHandler {
+		wsln, wsconnHandler, err := utils.WebsocketHandlerListener(ln.Addr())
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "listen ws", addr, "failure", err)
+			os.Exit(-2)
+		}
+		defer wsln.Close()
+
+		serviceRouter := service.NewRouter()
+
+		r := mux.NewRouter()
+		n := negroni.New()
+
+		// ws
+		n.UseFunc(func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+			connection := r.Header.Get("Connection")
+			upgrade := r.Header.Get("Upgrade")
+			if connection == "Upgrade" && upgrade == "websocket" {
+				wsconnHandler.ServeHTTP(w, r)
+				return
+			}
+
+			next(w, r)
+		})
+
+		n.UseHandler(r)
+
+		go func() {
+			server := &http.Server{
+				ReadTimeout:  30 * time.Second,
+				WriteTimeout: 30 * time.Second,
+				Handler:      n,
+			}
+
+			err := server.Serve(ln)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "HTTP server shutdown. occur error:", err)
+			}
+		}()
+		exposer.Serve(wsln, func(conn net.Conn) exposer.ProtocalHandler {
 			proto := exposer.NewProtocal(conn)
-			proto.On = auth.ServerSide(router, func(k string) bool {
+			proto.On = auth.ServerSide(serviceRouter, func(k string) bool {
 				return k == key
 			})
 			return proto
