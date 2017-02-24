@@ -7,7 +7,7 @@ import (
 
 type Service struct {
 	name string
-	attr *Attribute
+	attr *SafedAttribute
 
 	setOpenFuncOnce *sync.Once
 	openFn          func() (net.Conn, error)
@@ -19,7 +19,7 @@ type Service struct {
 func newService(name string) *Service {
 	return &Service{
 		name:             name,
-		attr:             newAttribute(),
+		attr:             NewSafedAttribute(new(Attribute)),
 		setOpenFuncOnce:  new(sync.Once),
 		openFn:           nil,
 		setCloseFuncOnce: new(sync.Once),
@@ -31,7 +31,7 @@ func (s *Service) Name() string {
 	return s.name
 }
 
-func (s *Service) Attribute() *Attribute {
+func (s *Service) Attribute() *SafedAttribute {
 	return s.attr
 }
 

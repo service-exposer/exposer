@@ -12,7 +12,7 @@ func TestService(t *testing.T) {
 		t.Fatal("expect", "test", "got", service)
 	}
 
-	err := service.Attribute().View(func(attr *Attribute) error {
+	err := service.Attribute().View(func(attr Attribute) error {
 		if attr.HTTP.Is != false {
 			return errors.New("attr.HTTP.Is != false")
 		}

@@ -3,29 +3,34 @@ package service
 import "sync"
 
 type Attribute struct {
-	mu   *sync.RWMutex
 	HTTP struct {
 		Is   bool
 		Host string
 	}
 }
 
-func newAttribute() *Attribute {
-	return &Attribute{
-		mu: new(sync.RWMutex),
+type SafedAttribute struct {
+	mu   *sync.RWMutex
+	attr Attribute
+}
+
+func NewSafedAttribute(attr *Attribute) *SafedAttribute {
+	return &SafedAttribute{
+		mu:   new(sync.RWMutex),
+		attr: *attr,
 	}
 }
 
-func (attr *Attribute) View(fn func(attr *Attribute) error) error {
-	attr.mu.RLock()
-	defer attr.mu.RUnlock()
+func (safed *SafedAttribute) View(fn func(attr Attribute) error) error {
+	safed.mu.RLock()
+	defer safed.mu.RUnlock()
 
-	return fn(attr)
+	return fn(safed.attr)
 }
 
-func (attr *Attribute) Update(fn func(attr *Attribute) error) error {
-	attr.mu.Lock()
-	defer attr.mu.Unlock()
+func (safed *SafedAttribute) Update(fn func(attr *Attribute) error) error {
+	safed.mu.Lock()
+	defer safed.mu.Unlock()
 
-	return fn(attr)
+	return fn(&safed.attr)
 }

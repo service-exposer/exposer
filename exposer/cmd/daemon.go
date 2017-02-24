@@ -84,7 +84,7 @@ func init() {
 
 			result := make(map[string]json.RawMessage)
 			for _, s := range services {
-				s.Attribute().View(func(attr *service.Attribute) error {
+				s.Attribute().View(func(attr service.Attribute) error {
 					data, err := json.Marshal(attr)
 					if err != nil {
 						return err
@@ -118,7 +118,7 @@ func init() {
 				return
 			}
 
-			s.Attribute().View(func(attr *service.Attribute) error {
+			s.Attribute().View(func(attr service.Attribute) error {
 				HTTP_is = attr.HTTP.Is
 				HTTP_host = attr.HTTP.Host
 				return nil

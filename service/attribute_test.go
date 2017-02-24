@@ -7,9 +7,9 @@ import (
 	"time"
 )
 
-func TestAttribute_View(t *testing.T) {
-	attr := newAttribute()
-	err := attr.View(func(attr *Attribute) error {
+func TestSafedAttribute_View(t *testing.T) {
+	attr := NewSafedAttribute(new(Attribute))
+	err := attr.View(func(attr Attribute) error {
 		if attr.HTTP.Is != false {
 			t.Fatal("want", false)
 		}
@@ -23,7 +23,7 @@ func TestAttribute_View(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = attr.View(func(attr *Attribute) error {
+	err = attr.View(func(attr Attribute) error {
 		return errors.New("test error bubbling")
 	})
 
@@ -33,7 +33,7 @@ func TestAttribute_View(t *testing.T) {
 }
 
 func TestAttribute_Update(t *testing.T) {
-	attr := newAttribute()
+	attr := NewSafedAttribute(new(Attribute))
 	err := attr.Update(func(attr *Attribute) error {
 		return nil
 	})
@@ -59,17 +59,21 @@ func TestAttribute_Update(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if attr.HTTP.Is != true {
-		t.Fatal("want", true)
-	}
+	attr.View(func(attr Attribute) error {
+		if attr.HTTP.Is != true {
+			t.Fatal("want", true)
+		}
 
-	if attr.HTTP.Host != "hostname.test" {
-		t.Fatal(attr.HTTP.Host, "want", "hostname.test")
-	}
+		if attr.HTTP.Host != "hostname.test" {
+			t.Fatal(attr.HTTP.Host, "want", "hostname.test")
+		}
+		return nil
+
+	})
 }
 
 func TestAttribute_UpdateAndView(t *testing.T) {
-	attr := newAttribute()
+	attr := NewSafedAttribute(new(Attribute))
 	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*200)
 	go func() {
 		for {
@@ -95,7 +99,7 @@ func TestAttribute_UpdateAndView(t *testing.T) {
 			default:
 			}
 		}
-		attr.View(func(attr *Attribute) error {
+		attr.View(func(attr Attribute) error {
 			if attr.HTTP.Is != true {
 				return errors.New("attr.HTTP.Is != true")
 			}
