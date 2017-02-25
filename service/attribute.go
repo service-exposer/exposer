@@ -4,9 +4,9 @@ import "sync"
 
 type Attribute struct {
 	HTTP struct {
-		Is   bool
-		Host string
-	}
+		Is   bool   `json:",omitempty"`
+		Host string `json:",omitempty"`
+	} `json:",omitempty"`
 }
 
 type SafedAttribute struct {
