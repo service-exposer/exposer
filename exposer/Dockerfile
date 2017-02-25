@@ -1,4 +1,4 @@
-FROM golang:1.7-onbuild
+FROM golang:1.8-onbuild
 
 ENV FORWARD_KEY 123456
 
