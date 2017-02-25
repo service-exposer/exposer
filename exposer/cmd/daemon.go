@@ -54,10 +54,8 @@ func init() {
 	// daemonCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	var (
 		addr = "0.0.0.0:9000"
-		key  = ""
 	)
 	daemonCmd.Flags().StringVarP(&addr, "addr", "a", addr, "listen address")
-	daemonCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
 
 	daemonCmd.Run = func(cmd *cobra.Command, args []string) {
 		ln, err := net.Listen("tcp", addr)

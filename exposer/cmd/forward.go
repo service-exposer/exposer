@@ -38,13 +38,9 @@ func init() {
 	var (
 		forward_addr = ""
 		local_port   = 0
-		server_url   = ""
-		key          = ""
 	)
 	forwardCmd.Flags().IntVarP(&local_port, "local-port", "l", local_port, "local port")
 	forwardCmd.Flags().StringVarP(&forward_addr, "forward-addr", "f", forward_addr, "forward address")
-	forwardCmd.Flags().StringVarP(&server_url, "server-url", "s", server_url, "server url")
-	forwardCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
 	forwardCmd.Run = func(cmd *cobra.Command, args []string) {
 		log.Print("listen ", local_port)
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", local_port))

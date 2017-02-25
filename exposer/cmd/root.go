@@ -11,10 +11,25 @@ import (
 var RootCmd = &cobra.Command{
 	Use:   "exposer",
 	Short: "A way to expose tcp service via websocket",
-	Long: `exposer is a agent to expose and link tcp service via websocket. 
+	Long: `exposer is a agent to expose and link tcp service via websocket.
 
-It is designed to work at somewhere cannot connect tcp server directly, 
-like firewall limitation.`,
+		It is designed to work at somewhere cannot connect tcp server directly,
+		like firewall limitation.`,
+}
+
+const (
+	ENV_SERVER_URL = "EXPOSER_SERVER"
+	ENV_KEY        = "EXPOSER_KEY"
+)
+
+var (
+	server_url = ""
+	key        = ""
+)
+
+func init() {
+	RootCmd.PersistentFlags().StringVarP(&server_url, "server", "s", os.Getenv(ENV_SERVER_URL), "server url,you can set env EXPOSER_SERVER")
+	RootCmd.PersistentFlags().StringVarP(&key, "key", "k", os.Getenv(ENV_KEY), "auth key,you can set env EXPOSER_KEY")
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.

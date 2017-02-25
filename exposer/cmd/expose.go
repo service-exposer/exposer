@@ -51,15 +51,11 @@ func init() {
 	var (
 		service_name = ""
 		service_addr = "" // [host]:port
-		server_url   = ""
-		key          = ""
 		is_http      = false
 		http_host    = ""
 	)
 	exposeCmd.Flags().StringVarP(&service_name, "name", "n", service_name, "service name")
 	exposeCmd.Flags().StringVarP(&service_addr, "addr", "a", service_addr, "service address format: [host]:port")
-	exposeCmd.Flags().StringVarP(&server_url, "server-url", "s", server_url, "server url")
-	exposeCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
 	exposeCmd.Flags().BoolVar(&is_http, "http", is_http, "expose service as HTTP")
 	exposeCmd.Flags().StringVar(&http_host, "http.host", "", "set HTTP host")
 	exposeCmd.Run = func(cmd *cobra.Command, args []string) {

@@ -49,13 +49,9 @@ func init() {
 	var (
 		service_name = ""
 		listen_addr  = "" // [host]:port
-		server_url   = ""
-		key          = ""
 	)
 	linkCmd.Flags().StringVarP(&service_name, "name", "n", service_name, "service name")
 	linkCmd.Flags().StringVarP(&listen_addr, "listen", "l", listen_addr, "listen address. format: [host]:port")
-	linkCmd.Flags().StringVarP(&server_url, "server-url", "s", server_url, "server url")
-	linkCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
 
 	linkCmd.Run = func(cmd *cobra.Command, args []string) {
 		exit := func(code int, outs ...interface{}) {
