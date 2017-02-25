@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"net"
 	"testing"
 )
@@ -9,6 +10,16 @@ func TestService(t *testing.T) {
 	service := newService("test")
 	if service.Name() != "test" {
 		t.Fatal("expect", "test", "got", service)
+	}
+
+	err := service.Attribute().View(func(attr Attribute) error {
+		if attr.HTTP.Is != false {
+			return errors.New("attr.HTTP.Is != false")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	func() {

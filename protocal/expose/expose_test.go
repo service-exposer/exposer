@@ -34,8 +34,12 @@ func Test_expose(t *testing.T) {
 		return c2, nil
 	})
 
+	attr := service.Attribute{}
+	attr.HTTP.Is = true
+	attr.HTTP.Host = "hostname.test"
 	go proto.Request(CMD_EXPOSE, &ExposeReq{
 		Name: "test",
+		Attr: attr,
 	})
 
 	time.Sleep(time.Millisecond * 10)
@@ -58,4 +62,15 @@ func Test_expose(t *testing.T) {
 	if string(data) != "hello" {
 		t.Fatal("expect hello got", string(data))
 	}
+
+	router.Get("test").Attribute().View(func(attr service.Attribute) error {
+		if attr.HTTP.Is != true {
+			t.Fatal("want", true)
+		}
+		if attr.HTTP.Host != "hostname.test" {
+			t.Fatal(attr.HTTP.Host, "want", "hostname.test")
+		}
+
+		return nil
+	})
 }

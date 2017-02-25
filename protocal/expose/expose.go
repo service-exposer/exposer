@@ -15,8 +15,6 @@ const (
 	CMD_EXPOSE_REPLY = "expose:reply"
 )
 
-const ()
-
 type Reply struct {
 	OK  bool
 	Err string
@@ -24,6 +22,7 @@ type Reply struct {
 
 type ExposeReq struct {
 	Name string
+	Attr service.Attribute
 }
 
 func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
@@ -60,6 +59,10 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 			if !ok {
 				return errors.New("Router.Add failure")
 			}
+			router.Get(req.Name).Attribute().Update(func(attr *service.Attribute) error {
+				*attr = req.Attr
+				return nil
+			})
 			defer func() {
 				service := router.Get(req.Name)
 				if service != nil {

@@ -38,13 +38,9 @@ func init() {
 	var (
 		forward_addr = ""
 		local_port   = 0
-		server_url   = ""
-		key          = ""
 	)
 	forwardCmd.Flags().IntVarP(&local_port, "local-port", "l", local_port, "local port")
 	forwardCmd.Flags().StringVarP(&forward_addr, "forward-addr", "f", forward_addr, "forward address")
-	forwardCmd.Flags().StringVarP(&server_url, "server-url", "s", server_url, "server url")
-	forwardCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
 	forwardCmd.Run = func(cmd *cobra.Command, args []string) {
 		log.Print("listen ", local_port)
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", local_port))
@@ -54,10 +50,10 @@ func init() {
 		}
 		defer ln.Close()
 
-		log.Print("connect to server ", server_url)
-		conn, err := utils.DialWebsocket(server_url)
+		log.Print("connect to server ", server_websocket_url())
+		conn, err := utils.DialWebsocket(server_websocket_url())
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "dial server", server_url, "failure", err)
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(-3)
 		}
 		defer conn.Close()

@@ -49,13 +49,9 @@ func init() {
 	var (
 		service_name = ""
 		listen_addr  = "" // [host]:port
-		server_url   = ""
-		key          = ""
 	)
 	linkCmd.Flags().StringVarP(&service_name, "name", "n", service_name, "service name")
 	linkCmd.Flags().StringVarP(&listen_addr, "listen", "l", listen_addr, "listen address. format: [host]:port")
-	linkCmd.Flags().StringVarP(&server_url, "server-url", "s", server_url, "server url")
-	linkCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
 
 	linkCmd.Run = func(cmd *cobra.Command, args []string) {
 		exit := func(code int, outs ...interface{}) {
@@ -79,10 +75,10 @@ func init() {
 		}
 		defer ln.Close()
 
-		log.Print("connect to server ", server_url)
-		conn, err := utils.DialWebsocket(server_url)
+		log.Print("connect to server ", server_websocket_url())
+		conn, err := utils.DialWebsocket(server_websocket_url())
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "dial server", server_url, "failure", err)
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(-3)
 		}
 		defer conn.Close()

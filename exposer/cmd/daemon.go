@@ -15,16 +15,24 @@
 package cmd
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"net/http"
 	"os"
+	"strings"
+	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener/utils"
 	"github.com/service-exposer/exposer/protocal/auth"
 	"github.com/service-exposer/exposer/service"
 	"github.com/spf13/cobra"
+	"github.com/urfave/negroni"
 )
 
 // daemonCmd represents the daemon command
@@ -46,32 +54,168 @@ func init() {
 	// is called directly, e.g.:
 	// daemonCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	var (
-		addr     = "0.0.0.0:9000"
-		key      = ""
-		protocal = "ws"
+		addr = "0.0.0.0:9000"
 	)
 	daemonCmd.Flags().StringVarP(&addr, "addr", "a", addr, "listen address")
-	daemonCmd.Flags().StringVarP(&key, "key", "k", key, "auth key")
-	daemonCmd.Flags().StringVarP(&protocal, "protocal", "", protocal, "selected protocal")
 
 	daemonCmd.Run = func(cmd *cobra.Command, args []string) {
-		if protocal != "ws" {
-			fmt.Fprintln(os.Stderr, "don't support protocal:", protocal)
-			os.Exit(1)
-		}
-
-		log.Print("listen ", addr)
-		ln, err := utils.WebsocketListener("tcp", addr)
+		ln, err := net.Listen("tcp", addr)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "listen", addr, "failure", err)
-			os.Exit(-2)
+			os.Exit(-1)
 		}
 		defer ln.Close()
+		log.Print("listen ", addr)
 
-		router := service.NewRouter()
-		exposer.Serve(ln, func(conn net.Conn) exposer.ProtocalHandler {
+		wsln, wsconnHandler, err := utils.WebsocketHandlerListener(ln.Addr())
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "listen ws", addr, "failure", err)
+			os.Exit(-2)
+		}
+		defer wsln.Close()
+
+		serviceRouter := service.NewRouter()
+
+		r := mux.NewRouter()
+
+		r.Path("/api/services").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			services := serviceRouter.All()
+
+			result := make(map[string]json.RawMessage)
+			for _, s := range services {
+				s.Attribute().View(func(attr service.Attribute) error {
+					data, err := json.Marshal(attr)
+					if err != nil {
+						return err
+					}
+
+					result[s.Name()] = json.RawMessage(data)
+					return nil
+				})
+			}
+
+			json.NewEncoder(w).Encode(&result)
+
+		}).Methods("GET")
+
+		r.PathPrefix("/service/{name}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			vars := mux.Vars(r)
+			var (
+				name = vars["name"]
+			)
+
+			s := serviceRouter.Get(name)
+			if s == nil {
+				http.Error(w, "service is not exist", 404)
+				return
+			}
+
+			var (
+				isHTTP    = false
+				HTTP_host = ""
+			)
+
+			s.Attribute().View(func(attr service.Attribute) error {
+				isHTTP = attr.HTTP.Is
+				HTTP_host = attr.HTTP.Host
+				return nil
+			})
+
+			if !isHTTP {
+				http.Error(w, "service is not a HTTP service", 404)
+				return
+			}
+
+			subPath := r.URL.Path[len("/service/"+name):]
+			if subPath == "" {
+				subPath = "/"
+			}
+
+			conn, err := s.Open()
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+
+			url, err := r.URL.Parse(subPath)
+			if err != nil {
+				panic(err)
+			}
+			r.URL = url
+			r.Close = false
+			if HTTP_host != "" {
+				r.Host = HTTP_host
+			}
+			r.Header.Set("Connection", "close")
+			r.Header.Set("X-Origin-IP", r.RemoteAddr)
+
+			go r.Write(conn)
+
+			resp, err := http.ReadResponse(bufio.NewReader(conn), r)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			defer resp.Body.Close()
+
+			header := w.Header()
+			for k, v := range resp.Header {
+				header[k] = v
+			}
+
+			w.WriteHeader(resp.StatusCode)
+
+			io.Copy(w, resp.Body)
+		})
+
+		n := negroni.New()
+
+		// ws
+		n.UseFunc(func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+			connection := r.Header.Get("Connection")
+			upgrade := r.Header.Get("Upgrade")
+			if connection == "Upgrade" && upgrade == "websocket" {
+				wsconnHandler.ServeHTTP(w, r)
+				return
+			}
+
+			next(w, r)
+		})
+
+		// auth
+		n.UseFunc(func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+			if !strings.HasPrefix(r.URL.Path, "/api/") {
+				next(w, r)
+				return
+			}
+
+			auth := r.Header.Get("Authorization")
+			if auth != key {
+				w.WriteHeader(401)
+				fmt.Fprintln(w, "Please set Header Authorization as Key")
+				return
+			}
+
+			next(w, r)
+		})
+
+		n.UseHandler(r)
+
+		go func() {
+			server := &http.Server{
+				ReadTimeout:  30 * time.Second,
+				WriteTimeout: 30 * time.Second,
+				Handler:      n,
+			}
+
+			err := server.Serve(ln)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "HTTP server shutdown. occur error:", err)
+			}
+		}()
+		exposer.Serve(wsln, func(conn net.Conn) exposer.ProtocalHandler {
 			proto := exposer.NewProtocal(conn)
-			proto.On = auth.ServerSide(router, func(k string) bool {
+			proto.On = auth.ServerSide(serviceRouter, func(k string) bool {
 				return k == key
 			})
 			return proto

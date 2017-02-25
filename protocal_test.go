@@ -384,3 +384,62 @@ func TestProtocal_Emit(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}()
 }
+
+func TestProtocal_Wait(t *testing.T) {
+	var (
+		ErrTest = errors.New("test error")
+	)
+
+	func() {
+		c, _ := net.Pipe()
+		proto := NewProtocal(c)
+		const (
+			EVENT_ERROR = "event:error"
+		)
+
+		proto.On = func(proto *Protocal, cmd string, details []byte) error {
+			switch cmd {
+			case EVENT_ERROR:
+				return ErrTest
+			}
+			return errors.New("unknow cmd:" + cmd)
+		}
+		go proto.Handle()
+
+		err := proto.Emit(EVENT_ERROR, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = proto.Wait()
+		if err != ErrTest {
+			t.Fatal(err)
+		}
+	}()
+
+	func() {
+		s, c := net.Pipe()
+
+		proto_server := NewProtocal(s)
+		proto_server.On = func(proto *Protocal, cmd string, details []byte) error {
+			return ErrTest
+		}
+		go proto_server.Handle()
+
+		proto_client := NewProtocal(c)
+		proto_client.On = func(proto *Protocal, cmd string, details []byte) error {
+			return nil
+		}
+		go proto_client.Request("", nil)
+
+		err := proto_server.Wait()
+		if err != ErrTest {
+			t.Fatal(err, "want", ErrTest)
+		}
+
+		err = proto_client.Wait()
+		if err == nil {
+			t.Fatal(err, "want", nil)
+		}
+	}()
+}
