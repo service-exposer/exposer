@@ -17,6 +17,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 
@@ -44,12 +45,25 @@ func init() {
 	// lsCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	lsCmd.Run = func(cmd *cobra.Command, args []string) {
-		resp, err := http.Get(server_http_url() + "/api/services")
+		req, err := http.NewRequest("GET", server_http_url()+"/api/services", nil)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(-1)
 		}
+		req.Header.Set("Authorization", key)
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(-2)
+		}
 		defer resp.Body.Close()
+
+		ok := (200 <= resp.StatusCode && resp.StatusCode <= 299)
+		if !ok {
+			io.Copy(os.Stderr, resp.Body)
+			os.Exit(1)
+		}
 
 		var result map[string]*service.Attribute
 		err = json.NewDecoder(resp.Body).Decode(&result)

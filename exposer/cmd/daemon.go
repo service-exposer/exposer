@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -175,6 +176,23 @@ func init() {
 			upgrade := r.Header.Get("Upgrade")
 			if connection == "Upgrade" && upgrade == "websocket" {
 				wsconnHandler.ServeHTTP(w, r)
+				return
+			}
+
+			next(w, r)
+		})
+
+		// auth
+		n.UseFunc(func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+			if !strings.HasPrefix(r.URL.Path, "/api/") {
+				next(w, r)
+				return
+			}
+
+			auth := r.Header.Get("Authorization")
+			if auth != key {
+				w.WriteHeader(401)
+				fmt.Fprintln(w, "Please set Header Authorization as Key")
 				return
 			}
 
