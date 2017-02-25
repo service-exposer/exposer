@@ -16,6 +16,10 @@ type Protocal struct {
 	isHandshakeDone  bool
 	handshakeDecoder *json.Decoder
 	eventbus         chan HandshakeIncoming
+	done             chan struct{}
+
+	setErrOnce *sync.Once
+	err        error
 
 	// handle handshake
 	mutex_On *sync.Mutex
@@ -28,6 +32,9 @@ func NewProtocal(conn net.Conn) *Protocal {
 		isHandshakeDone:  false,
 		handshakeDecoder: json.NewDecoder(conn),
 		eventbus:         make(chan HandshakeIncoming),
+		done:             make(chan struct{}),
+		setErrOnce:       new(sync.Once),
+		err:              nil,
 		mutex_On:         new(sync.Mutex),
 	}
 }
@@ -139,8 +146,8 @@ func (proto *Protocal) Emit(event string, details interface{}) (err error) {
 }
 
 func (proto *Protocal) Handle() {
-	defer proto.conn.Close()
 	defer close(proto.eventbus)
+	defer proto.conn.Close()
 
 	if proto.On == nil {
 		panic("not set Protocal.On")
@@ -156,6 +163,7 @@ func (proto *Protocal) Handle() {
 				return proto.On(proto, handshake.Command, handshake.Details)
 			}()
 			if err != nil {
+				proto.shutdown(err)
 				return
 			}
 		}
@@ -164,19 +172,36 @@ func (proto *Protocal) Handle() {
 	var handshake HandshakeIncoming
 	for !proto.isHandshakeDone {
 		err := proto.handshakeDecoder.Decode(&handshake)
+
 		if err != nil {
-			// TODO: handle error
+			proto.shutdown(err)
 			return
 		}
-
 		err = func() error {
 			proto.mutex_On.Lock()
 			defer proto.mutex_On.Unlock()
 			return proto.On(proto, handshake.Command, handshake.Details)
 		}()
 		if err != nil {
-			// TODO: handle error
+			proto.shutdown(err)
 			return
 		}
+
 	}
+
+}
+
+func (proto *Protocal) shutdown(err error) {
+	if err == nil {
+		panic("err cannot be nil")
+	}
+	proto.setErrOnce.Do(func() {
+		proto.err = err
+		close(proto.done)
+	})
+}
+
+func (proto *Protocal) Wait() error {
+	<-proto.done
+	return proto.err
 }
