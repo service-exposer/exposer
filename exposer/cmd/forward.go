@@ -50,10 +50,10 @@ func init() {
 		}
 		defer ln.Close()
 
-		log.Print("connect to server ", server_url)
-		conn, err := utils.DialWebsocket(server_url)
+		log.Print("connect to server ", server_websocket_url())
+		conn, err := utils.DialWebsocket(server_websocket_url())
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "dial server", server_url, "failure", err)
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(-3)
 		}
 		defer conn.Close()

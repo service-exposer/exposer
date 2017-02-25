@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -28,8 +29,20 @@ var (
 )
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&server_url, "server", "s", os.Getenv(ENV_SERVER_URL), "server url,you can set env EXPOSER_SERVER")
+	RootCmd.PersistentFlags().StringVarP(&server_url, "server", "s", os.Getenv(ENV_SERVER_URL), "server url <http(s)://host:port> ,you can set env EXPOSER_SERVER")
 	RootCmd.PersistentFlags().StringVarP(&key, "key", "k", os.Getenv(ENV_KEY), "auth key,you can set env EXPOSER_KEY")
+}
+
+func server_http_url() string {
+	return server_url
+}
+
+func server_websocket_url() string {
+	if strings.HasPrefix(server_url, "http") {
+		return strings.Replace(server_url, "http", "ws", 1)
+	}
+
+	return server_url
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
