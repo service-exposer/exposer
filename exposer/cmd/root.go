@@ -14,8 +14,8 @@ var RootCmd = &cobra.Command{
 	Short: "A way to expose tcp service via websocket",
 	Long: `exposer is a agent to expose and link tcp service via websocket.
 
-		It is designed to work at somewhere cannot connect tcp server directly,
-		like firewall limitation.`,
+It is designed to work at somewhere cannot connect tcp server directly,
+like firewall limitation.`,
 }
 
 const (
