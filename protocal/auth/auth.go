@@ -57,7 +57,7 @@ func ServerSide(router *service.Router, authFn func(key string) (allow bool)) ex
 					return err
 				}
 
-				proto_next := exposer.NewProtocal(conn)
+				proto_next := exposer.NewProtocalWithParent(proto, conn)
 				proto_next.On = route.ServerSide(router)
 				go proto_next.Handle()
 			}
@@ -99,7 +99,7 @@ func ClientSide(routes <-chan NextRoute) exposer.HandshakeHandleFunc {
 				}
 
 				r := nr
-				proto_next := exposer.NewProtocal(conn)
+				proto_next := exposer.NewProtocalWithParent(proto, conn)
 				proto_next.On = route.ClientSide(r.HandleFunc, r.Cmd, r.Details)
 				go proto_next.Request(route.CMD_ROUTE, &r.Req)
 			}
