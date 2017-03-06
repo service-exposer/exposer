@@ -206,6 +206,10 @@ func (proto *Protocal) Shutdown(err error) {
 	proto.setErrOnce.Do(func() {
 		proto.err = err
 		close(proto.done)
+
+		if proto.parent != nil {
+			proto.parent.Shutdown(err)
+		}
 	})
 }
 
