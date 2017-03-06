@@ -5,7 +5,6 @@ import (
 	"net"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener/utils"
@@ -34,8 +33,6 @@ func TestForward(t *testing.T) {
 
 	go http.Serve(remote_ln, nil)
 
-	time.Sleep(time.Second)
-
 	// forward server
 	forward_ws_ln, err := utils.WebsocketListener("tcp", forward_ws_addr)
 	//forward_ws_ln, err := net.Listen("tcp", forward_ws_addr)
@@ -49,7 +46,6 @@ func TestForward(t *testing.T) {
 		proto.On = ServerSide()
 		return proto
 	})
-	time.Sleep(time.Second)
 
 	// local listen
 	local_ln, err := net.Listen("tcp", local_addr)
@@ -72,8 +68,6 @@ func TestForward(t *testing.T) {
 		Network: "tcp",
 		Address: remote_addr,
 	})
-
-	time.Sleep(1 * time.Second)
 
 	// access remote server by local address
 	resp, err := http.Get("http://" + local_addr)
