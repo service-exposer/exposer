@@ -163,7 +163,7 @@ func (proto *Protocal) Handle() {
 				return proto.On(proto, handshake.Command, handshake.Details)
 			}()
 			if err != nil {
-				proto.shutdown(err)
+				proto.Shutdown(err)
 				return
 			}
 		}
@@ -174,7 +174,7 @@ func (proto *Protocal) Handle() {
 		err := proto.handshakeDecoder.Decode(&handshake)
 
 		if err != nil {
-			proto.shutdown(err)
+			proto.Shutdown(err)
 			return
 		}
 		err = func() error {
@@ -183,7 +183,7 @@ func (proto *Protocal) Handle() {
 			return proto.On(proto, handshake.Command, handshake.Details)
 		}()
 		if err != nil {
-			proto.shutdown(err)
+			proto.Shutdown(err)
 			return
 		}
 
@@ -191,7 +191,7 @@ func (proto *Protocal) Handle() {
 
 }
 
-func (proto *Protocal) shutdown(err error) {
+func (proto *Protocal) Shutdown(err error) {
 	if err == nil {
 		panic("err cannot be nil")
 	}
