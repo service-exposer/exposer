@@ -180,7 +180,6 @@ func TestProtocal_Multiplex(t *testing.T) {
 				}(conn)
 			}
 		}()
-		time.Sleep(time.Second)
 
 		session := muxado.Client(c, nil)
 		defer session.Close()
@@ -240,7 +239,6 @@ func TestProtocal_Multiplex(t *testing.T) {
 				}(conn)
 			}
 		}()
-		time.Sleep(time.Second)
 
 		session := NewProtocal(c).Multiplex(true)
 		defer session.Close()
@@ -368,10 +366,12 @@ func TestProtocal_Emit(t *testing.T) {
 		const (
 			EVENT_TIMEOUT = "event:timeout"
 		)
+
+		waitTimeout := make(chan bool)
 		proto.On = func(proto *Protocal, cmd string, details []byte) error {
 			switch cmd {
 			case EVENT_TIMEOUT:
-				fmt.Println("timeout")
+				waitTimeout <- true
 			}
 			return errors.New("unknow cmd:" + cmd)
 		}
@@ -381,7 +381,13 @@ func TestProtocal_Emit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(100 * time.Millisecond)
+
+		select {
+		case <-waitTimeout:
+		case <-time.After(time.Millisecond * 100):
+			t.Fatal("expect EVENT_TIMEOUT")
+		}
+
 	}()
 }
 
