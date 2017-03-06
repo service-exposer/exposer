@@ -12,6 +12,8 @@ import (
 
 type HandshakeHandleFunc func(proto *Protocal, cmd string, details []byte) error
 type Protocal struct {
+	parent *Protocal
+
 	conn             net.Conn
 	isHandshakeDone  bool
 	handshakeDecoder *json.Decoder
@@ -37,6 +39,12 @@ func NewProtocal(conn net.Conn) *Protocal {
 		err:              nil,
 		mutex_On:         new(sync.Mutex),
 	}
+}
+
+func NewProtocalWithParent(parent *Protocal, conn net.Conn) *Protocal {
+	proto := NewProtocal(conn)
+	proto.parent = parent
+	return proto
 }
 
 func (proto *Protocal) Reply(cmd string, details interface{}) error {
