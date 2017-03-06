@@ -44,9 +44,6 @@ func TestServe(t *testing.T) {
 		return proto
 	})
 
-	// wait server setup
-	time.Sleep(time.Second * 1)
-
 	conn, err := dial()
 	if err != nil {
 		t.Fatal(err)
