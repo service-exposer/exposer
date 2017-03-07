@@ -37,7 +37,7 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 
 			service := router.Get(req.Name)
 			if service == nil {
-				err := errors.New(fmt.Sprint("service", req.Name, "is not exist"))
+				err := errors.New(fmt.Sprintf("service %s is not exist", req.Name))
 				proto.Reply(CMD_LINK_REPLY, &Reply{
 					OK:  false,
 					Err: err.Error(),
