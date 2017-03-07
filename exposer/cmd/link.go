@@ -97,16 +97,12 @@ func init() {
 			}
 			log.Print("setup keepalive route")
 
-			handleFn := link.ClientSide(ln)
 			nextRoutes <- auth.NextRoute{
 				Req: route.RouteReq{
 					Type: route.Link,
 				},
-				HandleFunc: func(proto *exposer.Protocal, cmd string, details []byte) error {
-					log.Print("link:", cmd, string(details))
-					return handleFn(proto, cmd, details)
-				},
-				Cmd: link.CMD_LINK,
+				HandleFunc: link.ClientSide(ln),
+				Cmd:        link.CMD_LINK,
 				Details: &link.LinkReq{
 					Name: service_name,
 				},
@@ -114,9 +110,9 @@ func init() {
 			log.Print("setup link route")
 		}()
 
-		proto.Request(auth.CMD_AUTH, &auth.AuthReq{
+		go proto.Request(auth.CMD_AUTH, &auth.AuthReq{
 			Key: key,
 		})
-
+		exit(0, proto.Wait())
 	}
 }

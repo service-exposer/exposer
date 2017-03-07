@@ -8,7 +8,7 @@ import (
 	"github.com/service-exposer/exposer"
 )
 
-const (
+var (
 	DefaultInterval = 20 * time.Second
 	DefaultTimeout  = 30 * time.Second
 )

@@ -86,8 +86,10 @@ func init() {
 			log.Print("setup forward route")
 		}()
 
-		proto.Request(auth.CMD_AUTH, &auth.AuthReq{
+		go proto.Request(auth.CMD_AUTH, &auth.AuthReq{
 			Key: key,
 		})
+
+		exit(0, proto.Wait())
 	}
 }

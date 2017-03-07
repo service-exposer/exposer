@@ -89,17 +89,13 @@ func init() {
 			}
 			log.Print("setup keepalive route")
 
-			handleFn := expose.ClientSide(func() (net.Conn, error) {
-				return net.Dial("tcp", service_addr)
-			})
 			nextRoutes <- auth.NextRoute{
 				Req: route.RouteReq{
 					Type: route.Expose,
 				},
-				HandleFunc: func(proto *exposer.Protocal, cmd string, details []byte) error {
-					log.Print("link:", cmd, string(details))
-					return handleFn(proto, cmd, details)
-				},
+				HandleFunc: expose.ClientSide(func() (net.Conn, error) {
+					return net.Dial("tcp", service_addr)
+				}),
 				Cmd: expose.CMD_EXPOSE,
 				Details: &expose.ExposeReq{
 					Name: service_name,
@@ -113,14 +109,9 @@ func init() {
 			log.Print("setup expose route")
 		}()
 
-		proto.Request(auth.CMD_AUTH, &auth.AuthReq{
+		go proto.Request(auth.CMD_AUTH, &auth.AuthReq{
 			Key: key,
 		})
-
+		exit(0, proto.Wait())
 	}
-}
-
-func exit(code int, outs ...interface{}) {
-	fmt.Fprintln(os.Stderr, outs...)
-	os.Exit(code)
 }
