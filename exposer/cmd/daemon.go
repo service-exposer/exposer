@@ -81,7 +81,7 @@ func init() {
 		r.Path("/api/services").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			services := serviceRouter.All()
 
-			result := make(map[string]json.RawMessage)
+			result := make(map[string]*json.RawMessage)
 			for _, s := range services {
 				s.Attribute().View(func(attr service.Attribute) error {
 					data, err := json.Marshal(attr)
@@ -89,7 +89,8 @@ func init() {
 						return err
 					}
 
-					result[s.Name()] = json.RawMessage(data)
+					rawmsg := json.RawMessage(data)
+					result[s.Name()] = &rawmsg
 					return nil
 				})
 			}
