@@ -68,18 +68,57 @@ func ServerSide(timeout time.Duration) exposer.HandshakeHandleFunc {
 	}
 }
 
-func ClientSide(interval time.Duration) exposer.HandshakeHandleFunc {
+func ClientSide(timeout, interval time.Duration) exposer.HandshakeHandleFunc {
+	if timeout == 0 {
+		timeout = DefaultTimeout
+	}
 	if interval == 0 {
 		interval = DefaultInterval
 	}
 
+	if interval >= timeout {
+		panic("interval MUST less than timeout")
+	}
+
+	var (
+		mutex        = new(sync.Mutex)
+		lastPingTime = time.Now()
+	)
+
+	var once = new(sync.Once)
+
 	return func(proto *exposer.Protocal, cmd string, details []byte) error {
+		once.Do(func() {
+			go func() {
+				for range time.Tick(timeout) {
+					var done = false
+					mutex.Lock()
+					if time.Now().Sub(lastPingTime) > timeout {
+						proto.Emit(EVENT_TIMEOUT, nil)
+						done = true
+					}
+					mutex.Unlock()
+
+					if done {
+						return
+					}
+				}
+			}()
+		})
+
 		switch cmd {
 		case CMD_PONG:
+			mutex.Lock()
+			lastPingTime = time.Now()
+			mutex.Unlock()
+
 			time.Sleep(interval)
 			return proto.Reply(CMD_PING, nil)
+		case EVENT_TIMEOUT:
+			return errors.New("keepalive: timeout")
 		}
 
 		return errors.New("unknow cmd: " + cmd)
+
 	}
 }
