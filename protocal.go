@@ -161,17 +161,28 @@ func (proto *Protocal) Handle() {
 		panic("not set Protocal.On")
 	}
 
+	handleHandshake := func(proto *Protocal, handshake HandshakeIncoming) error {
+		proto.mutex_On.Lock()
+		defer proto.mutex_On.Unlock()
+
+		if proto.isShutdown() {
+			return nil
+		}
+
+		err := proto.On(proto, handshake.Command, handshake.Details)
+		if err != nil {
+			proto.Shutdown(err)
+			return err
+		}
+		return nil
+	}
+
 	go func() {
 		defer proto.conn.Close()
 
 		for handshake := range proto.eventbus {
-			err := func() error {
-				proto.mutex_On.Lock()
-				defer proto.mutex_On.Unlock()
-				return proto.On(proto, handshake.Command, handshake.Details)
-			}()
+			err := handleHandshake(proto, handshake)
 			if err != nil {
-				proto.Shutdown(err)
 				return
 			}
 		}
@@ -185,18 +196,11 @@ func (proto *Protocal) Handle() {
 			proto.Shutdown(err)
 			return
 		}
-		err = func() error {
-			proto.mutex_On.Lock()
-			defer proto.mutex_On.Unlock()
-			return proto.On(proto, handshake.Command, handshake.Details)
-		}()
+		err = handleHandshake(proto, handshake)
 		if err != nil {
-			proto.Shutdown(err)
 			return
 		}
-
 	}
-
 }
 
 func (proto *Protocal) Shutdown(err error) {
@@ -211,6 +215,15 @@ func (proto *Protocal) Shutdown(err error) {
 			proto.parent.Shutdown(err)
 		}
 	})
+}
+
+func (proto *Protocal) isShutdown() bool {
+	select {
+	case <-proto.done:
+		return true
+	default:
+		return false
+	}
 }
 
 func (proto *Protocal) Wait() error {
