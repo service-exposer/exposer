@@ -15,13 +15,13 @@
 package cmd
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -111,68 +111,86 @@ func init() {
 				return
 			}
 
-			var (
-				isHTTP    = false
-				HTTP_host = ""
-			)
-
-			s.Attribute().View(func(attr service.Attribute) error {
-				isHTTP = attr.HTTP.Is
-				HTTP_host = attr.HTTP.Host
+			var attr service.Attribute
+			s.Attribute().View(func(a service.Attribute) error {
+				attr = a
 				return nil
 			})
 
-			if !isHTTP {
+			if !attr.HTTP.Is {
 				http.Error(w, "service is not a HTTP service", 404)
 				return
 			}
 
-			subPath := r.URL.Path[len("/service/"+name):]
-			if subPath == "" {
-				subPath = "/"
+			if r.URL.Path == "/service/"+name {
+				http.Redirect(w, r, "/service/"+name+"/", 302)
+				return
 			}
 
-			conn, err := s.Open()
+			hj, ok := w.(http.Hijacker)
+			if !ok {
+				http.Error(w, "webserver doesn't support hijacking", 500)
+				return
+			}
+
+			client, clientbufrw, err := hj.Hijack()
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				return
 			}
 
-			url, err := r.URL.Parse(subPath)
-			if err != nil {
-				panic(err)
-			}
-			r.URL = url
-			r.Close = false
-			if HTTP_host != "" {
-				r.Host = HTTP_host
-			}
-			r.Header.Set("Connection", "close")
-			r.Header.Set("X-Origin-IP", r.RemoteAddr)
-
-			go r.Write(conn)
-
-			resp, err := http.ReadResponse(bufio.NewReader(conn), r)
+			server, err := s.Open()
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				return
 			}
-			defer resp.Body.Close()
 
-			header := w.Header()
-			for k, v := range resp.Header {
-				header[k] = v
-			}
+			go func(r *http.Request) {
+				var err error
+				for err == nil {
+					fmt.Println(r.URL.Path)
+					subPath := r.URL.Path[len("/service/"+name):]
+					if subPath == "" {
+						client.Close()
+						server.Close()
+						return
+					}
+					if subPath[0] != '/' {
+						subPath = "/" + subPath
+					}
+					url, _ := url.Parse(subPath)
 
-			w.WriteHeader(resp.StatusCode)
+					r.URL = url
+					if attr.HTTP.Host != "" {
+						r.Host = attr.HTTP.Host
+					}
+					r.Header.Set("X-Origin-IP", client.RemoteAddr().String())
 
-			io.Copy(w, resp.Body)
+					r.Write(server)
+
+					if r.Header.Get("Upgrade") != "" {
+						break
+					}
+					r, err = http.ReadRequest(clientbufrw.Reader)
+				}
+
+				io.Copy(server, clientbufrw)
+				client.Close()
+			}(r)
+
+			io.Copy(clientbufrw, server)
+			server.Close()
 		})
 
 		n := negroni.New()
 
 		// ws
 		n.UseFunc(func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+			if strings.HasPrefix(r.URL.Path, "/service/") {
+				next(w, r)
+				return
+			}
+
 			connection := r.Header.Get("Connection")
 			upgrade := r.Header.Get("Upgrade")
 			if connection == "Upgrade" && upgrade == "websocket" {
