@@ -449,3 +449,21 @@ func TestProtocal_Wait(t *testing.T) {
 		}
 	}()
 }
+
+func TestNewProtocalWithParent(t *testing.T) {
+	conn, _ := net.Pipe()
+	func() {
+		proto := NewProtocalWithParent(nil, conn)
+		if proto.parent != nil {
+			t.Fatal(proto.parent, "expect nil")
+		}
+	}()
+
+	func() {
+		parent_proto := NewProtocal(conn)
+		proto := NewProtocalWithParent(parent_proto, conn)
+		if proto.parent != parent_proto {
+			t.Fatal(proto.parent, "expect", parent_proto)
+		}
+	}()
+}
