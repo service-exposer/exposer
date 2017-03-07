@@ -92,7 +92,7 @@ func init() {
 				Req: route.RouteReq{
 					Type: route.KeepAlive,
 				},
-				HandleFunc: keepalive.ClientSide(0),
+				HandleFunc: keepalive.ClientSide(0, 0),
 				Cmd:        keepalive.CMD_PING,
 			}
 			log.Print("setup keepalive route")

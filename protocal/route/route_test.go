@@ -33,7 +33,7 @@ func Test_route(t *testing.T) {
 		cmds := make(chan string)
 
 		proto := exposer.NewProtocal(conn)
-		handlefn := keepalive.ClientSide(100 * time.Millisecond)
+		handlefn := keepalive.ClientSide(0, 100*time.Millisecond)
 		proto.On = ClientSide(func(proto *exposer.Protocal, cmd string, details []byte) error {
 			cmds <- cmd
 			return handlefn(proto, cmd, details)

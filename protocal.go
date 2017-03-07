@@ -180,10 +180,15 @@ func (proto *Protocal) Handle() {
 	go func() {
 		defer proto.conn.Close()
 
+		isDone := false
 		for handshake := range proto.eventbus {
+			if isDone {
+				continue
+			}
+
 			err := handleHandshake(proto, handshake)
 			if err != nil {
-				return
+				isDone = false
 			}
 		}
 	}()

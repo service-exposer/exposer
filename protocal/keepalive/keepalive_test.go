@@ -80,7 +80,7 @@ func Test_keepalive(t *testing.T) {
 	var cmd *command
 
 	func() {
-		cmds = test_keepalive(t, ms(20), ms(0), ms(20), ms(10))
+		cmds = test_keepalive(t, ms(60), ms(0), ms(60), ms(30))
 		cmd = <-cmds
 		if cmd.cmd != CMD_PING || !cmd.isServer {
 			t.Fatal("expect", CMD_PING, "& isServer", "got", cmd)
@@ -91,10 +91,10 @@ func Test_keepalive(t *testing.T) {
 		}
 	}()
 	func() {
-		cmds = test_keepalive(t, ms(20), ms(0), ms(100), ms(30))
+		cmds = test_keepalive(t, ms(50), ms(0), ms(100), ms(90))
 		cmd = <-cmds
 		if cmd.cmd != EVENT_TIMEOUT || !cmd.isServer {
-			t.Fatal("expect", CMD_PING, "& isServer", "got", cmd)
+			t.Fatal("expect", EVENT_TIMEOUT, "& isServer", "got", cmd)
 		}
 	}()
 
@@ -104,7 +104,7 @@ func Test_keepalive(t *testing.T) {
 				t.Fatal("expect panic")
 			}
 		}()
-		cmds = test_keepalive(t, ms(10), ms(0), ms(10), ms(30))
+		cmds = test_keepalive(t, ms(30), ms(0), ms(30), ms(90))
 	}()
 
 	func() {
@@ -113,14 +113,14 @@ func Test_keepalive(t *testing.T) {
 				t.Fatal("expect panic")
 			}
 		}()
-		cmds = test_keepalive(t, ms(10), ms(0), ms(30), ms(30))
+		cmds = test_keepalive(t, ms(30), ms(0), ms(90), ms(90))
 	}()
 
 	func() {
-		cmds = test_keepalive(t, ms(20), ms(10), ms(20), ms(10))
+		cmds = test_keepalive(t, ms(150), ms(90), ms(150), ms(90))
 		cmd = <-cmds
 		if cmd.cmd != EVENT_TIMEOUT || !cmd.isClient {
-			t.Fatal("expect", CMD_PING, "& isClient", "got", cmd)
+			t.Fatal("expect", EVENT_TIMEOUT, "& isClient", "got", cmd)
 		}
 	}()
 }

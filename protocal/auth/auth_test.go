@@ -70,7 +70,7 @@ func Test_auth(t *testing.T) {
 				Type: route.KeepAlive,
 			},
 			HandleFunc: func() exposer.HandshakeHandleFunc {
-				handlefn := keepalive.ClientSide(100 * time.Millisecond)
+				handlefn := keepalive.ClientSide(0, 100*time.Millisecond)
 
 				return func(proto *exposer.Protocal, cmd string, details []byte) error {
 					keepaliveCmds_1 <- cmd
@@ -86,7 +86,7 @@ func Test_auth(t *testing.T) {
 				Type: route.KeepAlive,
 			},
 			HandleFunc: func() exposer.HandshakeHandleFunc {
-				handlefn := keepalive.ClientSide(100 * time.Millisecond)
+				handlefn := keepalive.ClientSide(0, 100*time.Millisecond)
 
 				return func(proto *exposer.Protocal, cmd string, details []byte) error {
 					keepaliveCmds_2 <- cmd
