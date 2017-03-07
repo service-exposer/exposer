@@ -148,7 +148,6 @@ func init() {
 			go func(r *http.Request) {
 				var err error
 				for err == nil {
-					fmt.Println(r.URL.Path)
 					subPath := r.URL.Path[len("/service/"+name):]
 					if subPath == "" {
 						client.Close()
