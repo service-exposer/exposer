@@ -37,14 +37,14 @@ func init() {
 	// forwardCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	var (
 		forward_addr = ""
-		local_port   = 0
+		listen_addr  = "localhost:"
 	)
-	forwardCmd.Flags().IntVarP(&local_port, "local-port", "l", local_port, "local port")
+	forwardCmd.Flags().StringVarP(&listen_addr, "listen", "l", listen_addr, "local listen address")
 	forwardCmd.Flags().StringVarP(&forward_addr, "forward-addr", "f", forward_addr, "forward address")
 	forwardCmd.Run = func(cmd *cobra.Command, args []string) {
-		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", local_port))
+		ln, err := net.Listen("tcp", listen_addr)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "listen", fmt.Sprintf(":%d", local_port), "failure", err)
+			fmt.Fprintln(os.Stderr, "listen", listen_addr, "failure", err)
 			os.Exit(-2)
 		}
 		defer ln.Close()
