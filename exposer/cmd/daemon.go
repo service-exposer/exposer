@@ -65,11 +65,11 @@ func init() {
 			os.Exit(-1)
 		}
 		defer ln.Close()
-		log.Print("listen ", addr)
+		log.Print("listen ", ln.Addr())
 
 		wsln, wsconnHandler, err := utils.WebsocketHandlerListener(ln.Addr())
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "listen ws", addr, "failure", err)
+			fmt.Fprintln(os.Stderr, "listen ws", ln.Addr(), "failure", err)
 			os.Exit(-2)
 		}
 		defer wsln.Close()

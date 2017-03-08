@@ -42,21 +42,21 @@ func init() {
 	forwardCmd.Flags().IntVarP(&local_port, "local-port", "l", local_port, "local port")
 	forwardCmd.Flags().StringVarP(&forward_addr, "forward-addr", "f", forward_addr, "forward address")
 	forwardCmd.Run = func(cmd *cobra.Command, args []string) {
-		log.Print("listen ", local_port)
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", local_port))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "listen", fmt.Sprintf(":%d", local_port), "failure", err)
 			os.Exit(-2)
 		}
 		defer ln.Close()
+		log.Print("listen ", ln.Addr())
 
-		log.Print("connect to server ", server_websocket_url())
 		conn, err := utils.DialWebsocket(server_websocket_url())
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "connect to server", server_websocket_url(), "failure", err)
 			os.Exit(-3)
 		}
 		defer conn.Close()
+		log.Print("connect to server ", server_websocket_url())
 
 		nextRoutes := make(chan auth.NextRoute)
 		proto := exposer.NewProtocal(conn)

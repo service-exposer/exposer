@@ -67,21 +67,21 @@ func init() {
 			exit(2, "not set listen address")
 		}
 
-		log.Print("listen ", listen_addr)
 		ln, err := net.Listen("tcp", listen_addr)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "listen", listen_addr, "failure", err)
 			os.Exit(-2)
 		}
 		defer ln.Close()
+		log.Print("listen ", ln.Addr())
 
-		log.Print("connect to server ", server_websocket_url())
 		conn, err := utils.DialWebsocket(server_websocket_url())
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "connect to server", server_websocket_url(), "failure", err)
 			os.Exit(-3)
 		}
 		defer conn.Close()
+		log.Print("connect to server ", server_websocket_url())
 
 		nextRoutes := make(chan auth.NextRoute)
 		proto := exposer.NewProtocal(conn)

@@ -67,13 +67,13 @@ func init() {
 			exit(2, "not set service address")
 		}
 
-		log.Print("connect to server ", server_websocket_url())
 		conn, err := utils.DialWebsocket(server_websocket_url())
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "connect to server", server_websocket_url(), "failure", err)
 			os.Exit(-3)
 		}
 		defer conn.Close()
+		log.Print("connect to server ", server_websocket_url())
 
 		nextRoutes := make(chan auth.NextRoute)
 		proto := exposer.NewProtocal(conn)
