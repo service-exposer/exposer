@@ -48,7 +48,7 @@ func init() {
 	// linkCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	var (
 		service_name = ""
-		listen_addr  = "" // [host]:port
+		listen_addr  = "localhost:" // [host]:port
 	)
 	linkCmd.Flags().StringVarP(&service_name, "name", "n", service_name, "service name")
 	linkCmd.Flags().StringVarP(&listen_addr, "listen", "l", listen_addr, "listen address. format: [host]:port")
