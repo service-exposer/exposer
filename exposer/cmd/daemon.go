@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -54,9 +55,15 @@ func init() {
 	// is called directly, e.g.:
 	// daemonCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	var (
-		addr = "0.0.0.0:9000"
+		addr       = "0.0.0.0:9000"
+		enableTLS  = false
+		https_cert = ""
+		https_key  = ""
 	)
 	daemonCmd.Flags().StringVarP(&addr, "addr", "a", addr, "listen address")
+	daemonCmd.Flags().BoolVarP(&enableTLS, "https", "", enableTLS, "enable TLS")
+	daemonCmd.Flags().StringVarP(&https_cert, "https-cert", "", https_cert, "TLS certificate")
+	daemonCmd.Flags().StringVarP(&https_key, "https-key", "", https_key, "TLS key")
 
 	daemonCmd.Run = func(cmd *cobra.Command, args []string) {
 		ln, err := net.Listen("tcp", addr)
@@ -65,7 +72,24 @@ func init() {
 			os.Exit(-1)
 		}
 		defer ln.Close()
-		log.Print("listen ", ln.Addr())
+
+		var schema = "http"
+		var tlsConf *tls.Config
+		if enableTLS {
+			cert, err := tls.LoadX509KeyPair(https_cert, https_key)
+			if err != nil {
+				exit(-5, "LoadX509KeyPair:", err)
+			}
+			tlsConf = &tls.Config{
+				Certificates: []tls.Certificate{cert},
+			}
+
+			// replace ln to tls.Listener
+			ln = tls.NewListener(ln, tlsConf)
+			defer ln.Close()
+			schema = "https"
+		}
+		log.Print("listen ", fmt.Sprintf("%s://%s/", schema, ln.Addr()))
 
 		wsln, wsconnHandler, err := utils.WebsocketHandlerListener(ln.Addr())
 		if err != nil {
@@ -224,6 +248,7 @@ func init() {
 				ReadTimeout:  30 * time.Second,
 				WriteTimeout: 30 * time.Second,
 				Handler:      n,
+				TLSConfig:    tlsConf,
 			}
 
 			err := server.Serve(ln)
