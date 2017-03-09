@@ -162,6 +162,8 @@ func init() {
 				http.Error(w, err.Error(), 500)
 				return
 			}
+			// clear up deadline that maybe set by http.Server
+			client.SetDeadline(time.Time{})
 
 			server, err := s.Open()
 			if err != nil {
