@@ -3,6 +3,7 @@ package link
 import (
 	"encoding/json"
 	"net"
+	"sync"
 
 	"github.com/juju/errors"
 	"github.com/service-exposer/exposer"
@@ -101,19 +102,57 @@ func ClientSide(ln net.Listener) exposer.HandshakeHandleFunc {
 			}
 
 			session := proto.Multiplex(true)
-			for {
-				local, err := ln.Accept()
-				if err != nil {
-					return errors.Trace(err)
-				}
-				remote, err := session.Open()
-				if err != nil {
-					return errors.Trace(err)
-				}
 
-				go exposer.Forward(remote, local)
-			}
-			return nil
+			errch := make(chan error, 1)
+			wg := new(sync.WaitGroup)
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				// detect session closed
+				// in fact,it's detecting underly conn closed
+				// so,it will immediately reactive while
+				// connection to server is closed
+				err, _, _ := session.Wait()
+				errch <- errors.Trace(err)
+				ln.Close()
+			}()
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				for {
+					local, err := ln.Accept()
+					if err != nil {
+						errch <- errors.Trace(err)
+						session.Close()
+						return
+					}
+					remote, err := session.Open()
+					if err != nil {
+						errch <- errors.Trace(err)
+						return
+					}
+
+					go exposer.Forward(remote, local)
+				}
+			}()
+
+			go func() {
+				wg.Wait()
+				close(errch)
+			}()
+
+			defer func() {
+				go func() {
+					for range errch {
+					}
+				}()
+			}()
+
+			return <-errch
 		}
 		return errors.New("unknow cmd: " + cmd)
 	}
