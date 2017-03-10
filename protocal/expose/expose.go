@@ -2,7 +2,6 @@ package expose
 
 import (
 	"encoding/json"
-	"io"
 	"net"
 
 	"github.com/juju/errors"
@@ -107,13 +106,7 @@ func ClientSide(dial func() (net.Conn, error)) exposer.HandshakeHandleFunc {
 					continue
 				}
 
-				go func(remote, local net.Conn) { // forward
-					defer remote.Close()
-					defer local.Close()
-
-					go io.Copy(remote, local)
-					io.Copy(local, remote)
-				}(remote, local)
+				go exposer.Forward(remote, local)
 			}
 			return nil
 		}

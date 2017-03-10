@@ -1,7 +1,7 @@
 package expose
 
 import (
-	"io/ioutil"
+	"io"
 	"net"
 	"testing"
 	"time"
@@ -51,7 +51,6 @@ func Test_expose(t *testing.T) {
 		if err == nil {
 			go func() {
 				c1.Write([]byte("hello"))
-				c1.Close()
 			}()
 			break
 		}
@@ -60,7 +59,8 @@ func Test_expose(t *testing.T) {
 
 	c2 := <-accept
 
-	data, err := ioutil.ReadAll(c2)
+	data := make([]byte, 5)
+	_, err = io.ReadAtLeast(c2, data, len(data))
 	if err != nil {
 		t.Fatal(err)
 	}

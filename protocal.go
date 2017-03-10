@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/inconshreveable/muxado"
 	"github.com/juju/errors"
@@ -106,14 +107,36 @@ func (proto *Protocal) Multiplex(isClient bool) muxado.Session {
 	return muxado.Server(newReadWriteCloser(proto.handshakeDecoder.Buffered(), proto.conn), nil)
 }
 
-func (proto *Protocal) Forward(conn net.Conn) {
-	defer proto.conn.Close()
-	defer conn.Close()
+const (
+	wait_time_before_close = 8 * time.Second // wait other conn read data
+)
 
+func Forward(c1, c2 net.Conn) {
+	go func() {
+		io.Copy(c1, c2)
+		time.Sleep(wait_time_before_close)
+		c1.Close()
+	}()
+	io.Copy(c2, c1)
+	time.Sleep(wait_time_before_close)
+	c2.Close()
+}
+
+func (proto *Protocal) Forward(conn net.Conn) {
 	proto.isHandshakeDone = true
 
-	go io.Copy(conn, io.MultiReader(proto.handshakeDecoder.Buffered(), proto.conn))
+	go func() {
+		io.Copy(conn, io.MultiReader(proto.handshakeDecoder.Buffered(), proto.conn))
+		time.Sleep(wait_time_before_close)
+		conn.Close()
+	}()
 	io.Copy(proto.conn, conn)
+	time.Sleep(wait_time_before_close)
+	proto.conn.Close()
+	/*
+		go io.Copy(conn, io.MultiReader(proto.handshakeDecoder.Buffered(), proto.conn))
+		io.Copy(proto.conn, conn)
+	*/
 }
 
 func (proto *Protocal) Request(cmd string, details interface{}) {

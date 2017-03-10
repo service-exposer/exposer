@@ -2,7 +2,6 @@ package link
 
 import (
 	"encoding/json"
-	"io"
 	"net"
 
 	"github.com/juju/errors"
@@ -58,11 +57,11 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 			return func() (err error) {
 				/*
 					defer func() {
-						// recover for service.Open,if you are sure that will not panic
-						// just delete this recover defer
-						if r := recover(); r != nil {
-							err = errors.New(fmt.Sprint("panic:", r))
-						}
+							// recover for service.Open,if you are sure that will not panic
+							// just delete this recover defer
+							if r := recover(); r != nil {
+									err = errors.New(fmt.Sprint("panic:", r))
+							}
 					}()
 				*/
 
@@ -79,13 +78,7 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 						return errors.Trace(err)
 					}
 
-					go func() { // forward
-						defer remote.Close()
-						defer local.Close()
-
-						go io.Copy(remote, local)
-						io.Copy(local, remote)
-					}()
+					go exposer.Forward(remote, local)
 				}
 			}()
 		}
@@ -118,13 +111,7 @@ func ClientSide(ln net.Listener) exposer.HandshakeHandleFunc {
 					return errors.Trace(err)
 				}
 
-				go func() { // forward
-					defer remote.Close()
-					defer local.Close()
-
-					go io.Copy(remote, local)
-					io.Copy(local, remote)
-				}()
+				go exposer.Forward(remote, local)
 			}
 			return nil
 		}
