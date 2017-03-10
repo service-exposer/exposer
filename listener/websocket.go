@@ -1,10 +1,10 @@
 package listener
 
 import (
-	"errors"
 	"net"
 
 	"github.com/gorilla/websocket"
+	"github.com/juju/errors"
 )
 
 type websocketListener struct {
@@ -24,7 +24,7 @@ func Websocket(accepts <-chan *websocket.Conn, closeFn func() error, addr net.Ad
 func (ln *websocketListener) Accept() (net.Conn, error) {
 	ws, ok := <-ln.accepts
 	if !ok {
-		return nil, errors.New("websocket listener closed")
+		return nil, errors.Annotate(ErrListenerClosed, "websocket")
 	}
 
 	return NewWebsocketConn(ws), nil

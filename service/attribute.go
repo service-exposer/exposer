@@ -1,6 +1,10 @@
 package service
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/juju/errors"
+)
 
 type Attribute struct {
 	HTTP struct {
@@ -25,12 +29,12 @@ func (safed *SafedAttribute) View(fn func(attr Attribute) error) error {
 	safed.mu.RLock()
 	defer safed.mu.RUnlock()
 
-	return fn(safed.attr)
+	return errors.Annotate(fn(safed.attr), "View")
 }
 
 func (safed *SafedAttribute) Update(fn func(attr *Attribute) error) error {
 	safed.mu.Lock()
 	defer safed.mu.Unlock()
 
-	return fn(&safed.attr)
+	return errors.Annotate(fn(&safed.attr), "Update")
 }

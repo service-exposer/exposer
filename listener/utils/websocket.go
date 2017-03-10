@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/juju/errors"
 	"github.com/service-exposer/exposer/listener"
 )
 
@@ -64,12 +65,12 @@ func WebsocketHandlerListener(addr net.Addr) (net.Listener, http.Handler, error)
 func WebsocketListener(network, addr string) (net.Listener, error) {
 	ln, err := net.Listen(network, addr)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	wsln, handler, err := WebsocketHandlerListener(ln.Addr())
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	server := http.Server{
@@ -88,7 +89,7 @@ func WebsocketListener(network, addr string) (net.Listener, error) {
 func DialWebsocket(url string) (net.Conn, error) {
 	ws, _, err := dialer.Dial(url, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	return listener.NewWebsocketConn(ws), nil

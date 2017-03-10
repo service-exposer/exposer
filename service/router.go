@@ -1,14 +1,15 @@
 package service
 
 import (
-	"errors"
 	"net"
 	"sort"
 	"sync"
+
+	"github.com/juju/errors"
 )
 
 var (
-	ErrServiceExist = errors.New("Register: service name exist")
+	ErrServiceExist = errors.New("service name exist")
 )
 
 type Router struct {
@@ -25,14 +26,14 @@ func NewRouter() *Router {
 
 func (r *Router) Prepare(name string) error {
 	if name == "" {
-		return ErrServiceExist
+		return errors.Annotatef(ErrServiceExist, "Prepare %q", name)
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if _, exist := r.routes[name]; exist {
-		return ErrServiceExist
+		return errors.Annotatef(ErrServiceExist, "Prepare %q", name)
 	}
 
 	r.routes[name] = newService(name)

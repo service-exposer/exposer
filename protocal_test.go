@@ -3,7 +3,6 @@ package exposer
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/inconshreveable/muxado"
+	"github.com/juju/errors"
 )
 
 func TestProtocal_Reply(t *testing.T) {
@@ -296,7 +296,7 @@ func TestProtocal_Multiplex(t *testing.T) {
 				for {
 					conn, err := session.Accept()
 					if err != nil {
-						return err
+						return errors.Trace(err)
 					}
 
 					go func(conn net.Conn) { // echo service
@@ -418,7 +418,7 @@ func TestProtocal_Wait(t *testing.T) {
 		}
 
 		err = proto.Wait()
-		if err != ErrTest {
+		if errors.Cause(err) != ErrTest {
 			t.Fatal(err)
 		}
 	}()
@@ -439,13 +439,13 @@ func TestProtocal_Wait(t *testing.T) {
 		go proto_client.Request("", nil)
 
 		err := proto_server.Wait()
-		if err != ErrTest {
-			t.Fatal(err, "want", ErrTest)
+		if errors.Cause(err) != ErrTest {
+			t.Fatal(errors.Cause(err), "want", ErrTest)
 		}
 
 		err = proto_client.Wait()
-		if err == nil {
-			t.Fatal(err, "want", nil)
+		if errors.Cause(err) == nil {
+			t.Fatal(errors.Cause(err), "want", nil)
 		}
 	}()
 }

@@ -2,10 +2,10 @@ package expose
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"net"
 
+	"github.com/juju/errors"
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/service"
 )
@@ -32,7 +32,7 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 			var req ExposeReq
 			err := json.Unmarshal(details, &req)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			err = router.Prepare(req.Name)
@@ -42,7 +42,7 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 					Err: err.Error(),
 				})
 
-				return err
+				return errors.Trace(err)
 			}
 			defer router.Remove(req.Name)
 
@@ -50,7 +50,7 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 				OK: true,
 			})
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			session := proto.Multiplex(true)
@@ -86,7 +86,7 @@ func ClientSide(dial func() (net.Conn, error)) exposer.HandshakeHandleFunc {
 			var reply Reply
 			err := json.Unmarshal(details, &reply)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			if !reply.OK {
@@ -98,7 +98,7 @@ func ClientSide(dial func() (net.Conn, error)) exposer.HandshakeHandleFunc {
 			for {
 				remote, err := session.Accept()
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 
 				local, err := dial()

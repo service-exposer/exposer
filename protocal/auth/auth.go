@@ -2,8 +2,8 @@ package auth
 
 import (
 	"encoding/json"
-	"errors"
 
+	"github.com/juju/errors"
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/protocal/route"
 	"github.com/service-exposer/exposer/service"
@@ -12,6 +12,10 @@ import (
 const (
 	CMD_AUTH       = "auth"
 	CMD_AUTH_REPLY = "auth:reply"
+)
+
+var (
+	ErrForbiddenKey = errors.New("forbidden key")
 )
 
 type Reply struct {
@@ -30,31 +34,30 @@ func ServerSide(router *service.Router, authFn func(key string) (allow bool)) ex
 			var req AuthReq
 			err := json.Unmarshal(details, &req)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			if !authFn(req.Key) {
-				err := errors.New("auth: forbidden key")
 				proto.Reply(CMD_AUTH_REPLY, &Reply{
 					OK:  false,
-					Err: err.Error(),
+					Err: ErrForbiddenKey.Error(),
 				})
 
-				return err
+				return errors.Annotate(err, "auth")
 			}
 
 			err = proto.Reply(CMD_AUTH_REPLY, &Reply{
 				OK: true,
 			})
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			session := proto.Multiplex(false)
 			for {
 				conn, err := session.Accept()
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 
 				proto_next := exposer.NewProtocalWithParent(proto, conn)
@@ -83,7 +86,7 @@ func ClientSide(routes <-chan NextRoute) exposer.HandshakeHandleFunc {
 			var reply Reply
 			err := json.Unmarshal(details, &reply)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			if !reply.OK {
@@ -95,7 +98,7 @@ func ClientSide(routes <-chan NextRoute) exposer.HandshakeHandleFunc {
 			for nr := range routes {
 				conn, err := session.Open()
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 
 				r := nr

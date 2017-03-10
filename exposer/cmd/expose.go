@@ -15,11 +15,10 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 	"net"
-	"os"
 
+	"github.com/juju/errors"
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener/utils"
 	"github.com/service-exposer/exposer/protocal/auth"
@@ -69,11 +68,10 @@ func init() {
 
 		conn, err := utils.DialWebsocket(server_websocket_url())
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "connect to server", server_websocket_url(), "failure", err)
-			os.Exit(-3)
+			exit(-3, errors.ErrorStack(errors.Annotatef(err, "conn %s", server_websocket_url())))
 		}
 		defer conn.Close()
-		log.Print("connect to server ", server_websocket_url())
+		log.Print("connect ", server_websocket_url())
 
 		nextRoutes := make(chan auth.NextRoute)
 		proto := exposer.NewProtocal(conn)
@@ -94,7 +92,8 @@ func init() {
 					Type: route.Expose,
 				},
 				HandleFunc: expose.ClientSide(func() (net.Conn, error) {
-					return net.Dial("tcp", service_addr)
+					conn, err := net.Dial("tcp", service_addr)
+					return conn, errors.Trace(err)
 				}),
 				Cmd: expose.CMD_EXPOSE,
 				Details: &expose.ExposeReq{
@@ -112,6 +111,6 @@ func init() {
 		go proto.Request(auth.CMD_AUTH, &auth.AuthReq{
 			Key: key,
 		})
-		exit(0, proto.Wait())
+		exit(0, errors.ErrorStack(errors.Trace(proto.Wait())))
 	}
 }

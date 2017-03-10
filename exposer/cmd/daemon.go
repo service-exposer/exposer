@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/juju/errors"
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener/utils"
 	"github.com/service-exposer/exposer/protocal/auth"
@@ -68,7 +69,7 @@ func init() {
 	daemonCmd.Run = func(cmd *cobra.Command, args []string) {
 		ln, err := net.Listen("tcp", addr)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "listen", addr, "failure", err)
+			fmt.Fprintln(os.Stderr, errors.ErrorStack(errors.Annotatef(err, "listen %s", addr)))
 			os.Exit(-1)
 		}
 		defer ln.Close()
@@ -78,7 +79,7 @@ func init() {
 		if enableTLS {
 			cert, err := tls.LoadX509KeyPair(https_cert, https_key)
 			if err != nil {
-				exit(-5, "LoadX509KeyPair:", err)
+				exit(-5, errors.ErrorStack(errors.Annotate(err, "LoadX509KeyPair")))
 			}
 			tlsConf = &tls.Config{
 				Certificates: []tls.Certificate{cert},
@@ -93,7 +94,7 @@ func init() {
 
 		wsln, wsconnHandler, err := utils.WebsocketHandlerListener(ln.Addr())
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "listen ws", ln.Addr(), "failure", err)
+			fmt.Fprintln(os.Stderr, errors.ErrorStack(errors.Annotatef(err, "listen ws %s", ln.Addr)))
 			os.Exit(-2)
 		}
 		defer wsln.Close()
@@ -110,7 +111,7 @@ func init() {
 				s.Attribute().View(func(attr service.Attribute) error {
 					data, err := json.Marshal(attr)
 					if err != nil {
-						return err
+						return errors.Trace(err)
 					}
 
 					rawmsg := json.RawMessage(data)
@@ -255,7 +256,7 @@ func init() {
 
 			err := server.Serve(ln)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "HTTP server shutdown. occur error:", err)
+				fmt.Fprintln(os.Stderr, errors.ErrorStack(errors.Annotate(err, "HTTP server shutdown")))
 			}
 		}()
 		exposer.Serve(wsln, func(conn net.Conn) exposer.ProtocalHandler {

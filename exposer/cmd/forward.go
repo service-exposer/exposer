@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 	"net"
-	"os"
 
+	"github.com/juju/errors"
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener/utils"
 	"github.com/service-exposer/exposer/protocal/auth"
@@ -44,19 +43,17 @@ func init() {
 	forwardCmd.Run = func(cmd *cobra.Command, args []string) {
 		ln, err := net.Listen("tcp", listen_addr)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "listen", listen_addr, "failure", err)
-			os.Exit(-2)
+			exit(-1, errors.ErrorStack(errors.Annotatef(err, "listen %s", listen_addr)))
 		}
 		defer ln.Close()
 		log.Print("listen ", ln.Addr())
 
 		conn, err := utils.DialWebsocket(server_websocket_url())
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "connect to server", server_websocket_url(), "failure", err)
-			os.Exit(-3)
+			exit(-2, errors.ErrorStack(errors.Annotatef(err, "connect %s", server_websocket_url())))
 		}
 		defer conn.Close()
-		log.Print("connect to server ", server_websocket_url())
+		log.Print("connect ", server_websocket_url())
 
 		nextRoutes := make(chan auth.NextRoute)
 		proto := exposer.NewProtocal(conn)
@@ -90,6 +87,6 @@ func init() {
 			Key: key,
 		})
 
-		exit(0, proto.Wait())
+		exit(0, errors.ErrorStack(errors.Trace(proto.Wait())))
 	}
 }

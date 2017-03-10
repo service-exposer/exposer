@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
+
+	"github.com/juju/errors"
 )
 
 func TestSafedAttribute_View(t *testing.T) {

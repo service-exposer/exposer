@@ -2,12 +2,12 @@ package exposer
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"net"
 	"sync"
 
 	"github.com/inconshreveable/muxado"
+	"github.com/juju/errors"
 )
 
 type HandshakeHandleFunc func(proto *Protocal, cmd string, details []byte) error
@@ -17,8 +17,11 @@ type Protocal struct {
 	conn             net.Conn
 	isHandshakeDone  bool
 	handshakeDecoder *json.Decoder
-	eventbus         chan HandshakeIncoming
 	done             chan struct{}
+
+	eventbus            chan HandshakeIncoming
+	eventbusClosed      bool
+	eventbusClosedMutex *sync.RWMutex
 
 	setErrOnce *sync.Once
 	err        error
@@ -30,14 +33,22 @@ type Protocal struct {
 
 func NewProtocal(conn net.Conn) *Protocal {
 	return &Protocal{
+		parent: nil,
+
 		conn:             conn,
 		isHandshakeDone:  false,
 		handshakeDecoder: json.NewDecoder(conn),
-		eventbus:         make(chan HandshakeIncoming),
 		done:             make(chan struct{}),
-		setErrOnce:       new(sync.Once),
-		err:              nil,
-		mutex_On:         new(sync.Mutex),
+
+		eventbus:            make(chan HandshakeIncoming),
+		eventbusClosed:      false,
+		eventbusClosedMutex: new(sync.RWMutex),
+
+		setErrOnce: new(sync.Once),
+		err:        nil,
+
+		mutex_On: new(sync.Mutex),
+		On:       nil,
 	}
 }
 
@@ -57,11 +68,11 @@ func (proto *Protocal) Reply(cmd string, details interface{}) error {
 		Details: details,
 	})
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	_, err = proto.conn.Write(data)
-	return err
+	return errors.Trace(err)
 }
 
 func newReadWriteCloser(buffered io.Reader, conn net.Conn) io.ReadWriteCloser {
@@ -135,46 +146,54 @@ func (proto *Protocal) Emit(event string, details interface{}) (err error) {
 		Details: details,
 	})
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	var handshake HandshakeIncoming
 	err = json.Unmarshal(data, &handshake)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
-	defer func() {
-		if r := recover(); r != nil {
-			err = errors.New("conn closed")
-		}
-	}()
+	/*
+		defer func() {
+			// chan proto.eventbus maybe closed,so use recover
+			if r := recover(); r != nil {
+				err = errors.New("conn closed")
+			}
+		}()
+	*/
+	proto.eventbusClosedMutex.RLock()
+	defer proto.eventbusClosedMutex.RUnlock()
+	if proto.eventbusClosed {
+		return errors.New("conn closed")
+	}
 	proto.eventbus <- handshake
 	return nil
 }
 
 func (proto *Protocal) Handle() {
-	defer close(proto.eventbus)
 	defer proto.conn.Close()
+	defer proto.Shutdown(errors.New("ok"))
 
 	if proto.On == nil {
 		panic("not set Protocal.On")
 	}
 
-	handleHandshake := func(proto *Protocal, handshake HandshakeIncoming) error {
+	handleHandshake := func(proto *Protocal, handshake HandshakeIncoming) bool {
 		proto.mutex_On.Lock()
 		defer proto.mutex_On.Unlock()
 
 		if proto.isShutdown() {
-			return nil
+			return false
 		}
 
 		err := proto.On(proto, handshake.Command, handshake.Details)
 		if err != nil {
-			proto.Shutdown(err)
-			return err
+			proto.Shutdown(errors.Trace(err))
+			return false
 		}
-		return nil
+		return true
 	}
 
 	go func() {
@@ -182,13 +201,14 @@ func (proto *Protocal) Handle() {
 
 		isDone := false
 		for handshake := range proto.eventbus {
+			// recv all messages while proto.eventbus chan is closed
 			if isDone {
 				continue
 			}
 
-			err := handleHandshake(proto, handshake)
-			if err != nil {
-				isDone = false
+			ok := handleHandshake(proto, handshake)
+			if !ok {
+				isDone = true
 			}
 		}
 	}()
@@ -201,8 +221,8 @@ func (proto *Protocal) Handle() {
 			proto.Shutdown(err)
 			return
 		}
-		err = handleHandshake(proto, handshake)
-		if err != nil {
+		ok := handleHandshake(proto, handshake)
+		if !ok {
 			return
 		}
 	}
@@ -215,6 +235,11 @@ func (proto *Protocal) Shutdown(err error) {
 	proto.setErrOnce.Do(func() {
 		proto.err = err
 		close(proto.done)
+
+		proto.eventbusClosedMutex.Lock()
+		close(proto.eventbus)
+		proto.eventbusClosed = true
+		proto.eventbusClosedMutex.Unlock()
 
 		if proto.parent != nil {
 			proto.parent.Shutdown(err)
@@ -233,5 +258,5 @@ func (proto *Protocal) isShutdown() bool {
 
 func (proto *Protocal) Wait() error {
 	<-proto.done
-	return proto.err
+	return errors.Trace(proto.err)
 }

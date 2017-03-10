@@ -3,6 +3,8 @@ package service
 import (
 	"net"
 	"sync"
+
+	"github.com/juju/errors"
 )
 
 type Service struct {
@@ -36,10 +38,11 @@ func (s *Service) Attribute() *SafedAttribute {
 }
 
 func (s *Service) Open() (net.Conn, error) {
-	return s.openFn()
+	conn, err := s.openFn()
+	return conn, errors.Annotatef(err, "Open %q", s)
 }
 func (s *Service) Close() error {
-	return s.closeFn()
+	return errors.Annotatef(s.closeFn(), "Close %q", s)
 }
 
 func (s *Service) setOpenFunc(fn func() (net.Conn, error)) {

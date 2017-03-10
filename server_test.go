@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/juju/errors"
 	"github.com/service-exposer/exposer/listener"
 )
 
@@ -31,7 +32,7 @@ func TestServe(t *testing.T) {
 				var req echoReq
 				err := json.Unmarshal(details, &req)
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 
 				return proto.Reply(CMD_ECHO_REPLY, &echoReply{
@@ -57,7 +58,7 @@ func TestServe(t *testing.T) {
 			var reply echoReply
 			err := json.Unmarshal(details, &reply)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			echo <- reply.Message

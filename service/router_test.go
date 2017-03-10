@@ -3,14 +3,16 @@ package service
 import (
 	"net"
 	"testing"
+
+	"github.com/juju/errors"
 )
 
 func TestRouter_Prepare(t *testing.T) {
 	r := NewRouter()
 
 	err := r.Prepare("")
-	if err != ErrServiceExist {
-		t.Fatal("expect(error)", ErrServiceExist, "got", err)
+	if errors.Cause(err) != ErrServiceExist {
+		t.Fatal("expect(error)", ErrServiceExist, "got", errors.Cause(err))
 	}
 
 	err = r.Prepare("test")

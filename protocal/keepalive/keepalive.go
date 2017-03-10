@@ -1,16 +1,20 @@
 package keepalive
 
 import (
-	"errors"
 	"sync"
 	"time"
 
+	"github.com/juju/errors"
 	"github.com/service-exposer/exposer"
 )
 
 var (
 	DefaultInterval = 20 * time.Second
 	DefaultTimeout  = 30 * time.Second
+)
+
+var (
+	ErrTimeout = errors.New("timeout")
 )
 
 const (
@@ -61,7 +65,7 @@ func ServerSide(timeout time.Duration) exposer.HandshakeHandleFunc {
 
 			return proto.Reply(CMD_PONG, nil)
 		case EVENT_TIMEOUT:
-			return errors.New("keepalive: timeout")
+			return errors.Trace(ErrTimeout)
 		}
 
 		return errors.New("unknow cmd: " + cmd)
@@ -115,7 +119,7 @@ func ClientSide(timeout, interval time.Duration) exposer.HandshakeHandleFunc {
 			time.Sleep(interval)
 			return proto.Reply(CMD_PING, nil)
 		case EVENT_TIMEOUT:
-			return errors.New("keepalive: timeout")
+			return errors.Trace(ErrTimeout)
 		}
 
 		return errors.New("unknow cmd: " + cmd)

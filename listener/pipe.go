@@ -1,9 +1,10 @@
 package listener
 
 import (
-	"errors"
 	"net"
 	"sync"
+
+	"github.com/juju/errors"
 )
 
 type pipeListener struct {
@@ -29,7 +30,7 @@ func (ln *pipeListener) Dial() (net.Conn, error) {
 	defer ln.Unlock()
 
 	if ln.closed {
-		return nil, errors.New("closed")
+		return nil, errors.Annotate(ErrListenerClosed, "pipe")
 	}
 
 	c1, c2 := net.Pipe()
@@ -45,7 +46,7 @@ func (ln *pipeListener) Dial() (net.Conn, error) {
 func (ln *pipeListener) Accept() (net.Conn, error) {
 	c, ok := <-ln.accepts
 	if !ok {
-		return nil, errors.New("closed")
+		return nil, errors.Annotate(ErrListenerClosed, "pipe")
 	}
 
 	return c, nil

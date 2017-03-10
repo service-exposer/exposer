@@ -16,11 +16,11 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
 
+	"github.com/juju/errors"
 	"github.com/service-exposer/exposer/service"
 	"github.com/spf13/cobra"
 )
@@ -45,17 +45,17 @@ func init() {
 	// lsCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	lsCmd.Run = func(cmd *cobra.Command, args []string) {
-		req, err := http.NewRequest("GET", server_http_url()+"/api/services", nil)
+		url := server_http_url() + "/api/services"
+		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			exit(-1, errors.ErrorStack(errors.Annotatef(err, "GET %s", url)))
 			os.Exit(-1)
 		}
 		req.Header.Set("Authorization", key)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(-2)
+			exit(-2, errors.ErrorStack(errors.Annotatef(err, "http.Client.Do")))
 		}
 		defer resp.Body.Close()
 
@@ -68,14 +68,12 @@ func init() {
 		var result map[string]*service.Attribute
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(2)
+			exit(2, errors.ErrorStack(errors.Trace(err)))
 		}
 
 		data, err := json.MarshalIndent(&result, "", "  ")
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(3)
+			exit(3, errors.ErrorStack(errors.Trace(err)))
 		}
 
 		os.Stdout.Write(data)

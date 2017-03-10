@@ -2,9 +2,8 @@ package route
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 
+	"github.com/juju/errors"
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/protocal/expose"
 	"github.com/service-exposer/exposer/protocal/forward"
@@ -25,6 +24,10 @@ const (
 	Expose    Type = "expose"
 	Link      Type = "link"
 	Forward   Type = "forward"
+)
+
+var (
+	ErrNotSupportedType = errors.New("not supported type")
 )
 
 type Reply struct {
@@ -48,7 +51,7 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 			var req RouteReq
 			err := json.Unmarshal(details, &req)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			switch req.Type {
@@ -57,7 +60,7 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 					OK: true,
 				})
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 
 				proto.On = keepaliveFn
@@ -66,7 +69,7 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 					OK: true,
 				})
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 
 				proto.On = exposeFn
@@ -75,7 +78,7 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 					OK: true,
 				})
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 
 				proto.On = linkFn
@@ -84,18 +87,18 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 					OK: true,
 				})
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 
 				proto.On = forwardFn
 			default:
-				err := errors.New(fmt.Sprint("unsupport RouteReq.Type", req.Type))
+				err := errors.Annotatef(ErrNotSupportedType, "%q", req.Type)
 				proto.Reply(CMD_ROUTE_REPLY, &Reply{
 					OK:  false,
 					Err: err.Error(),
 				})
 
-				return err
+				return errors.Trace(err)
 			}
 
 			return nil
@@ -112,7 +115,7 @@ func ClientSide(nextHandleFunc exposer.HandshakeHandleFunc, nextCmd string, next
 			var reply Reply
 			err := json.Unmarshal(details, &reply)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			if !reply.OK {

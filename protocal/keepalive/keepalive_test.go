@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/juju/errors"
 	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener"
 )
@@ -41,7 +42,7 @@ func Test_keepalive(t *testing.T) {
 					isServer: true,
 					cmd:      cmd,
 				}
-				return handlefn(proto, cmd, details)
+				return errors.Trace(handlefn(proto, cmd, details))
 			}
 
 			return proto

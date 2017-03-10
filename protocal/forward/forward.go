@@ -2,9 +2,9 @@ package forward
 
 import (
 	"encoding/json"
-	"errors"
 	"net"
 
+	"github.com/juju/errors"
 	"github.com/service-exposer/exposer"
 )
 
@@ -30,7 +30,7 @@ func ServerSide() exposer.HandshakeHandleFunc {
 			var forward Forward
 			err := json.Unmarshal(details, &forward)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			conn, err := net.Dial(forward.Network, forward.Address)
@@ -39,7 +39,7 @@ func ServerSide() exposer.HandshakeHandleFunc {
 					OK:  false,
 					Err: err.Error(),
 				})
-				return err
+				return errors.Trace(err)
 			}
 			conn.Close()
 
@@ -47,7 +47,7 @@ func ServerSide() exposer.HandshakeHandleFunc {
 				OK: true,
 			})
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			/*
@@ -89,12 +89,12 @@ func ServerSide() exposer.HandshakeHandleFunc {
 				proto.On = func(proto *exposer.Protocal, cmd string, details []byte) error {
 					err := proto.Reply("", nil)
 					if err != nil {
-						return err
+						return errors.Trace(err)
 					}
 
 					conn, err := net.Dial(forward.Network, forward.Address)
 					if err != nil {
-						return err
+						return errors.Trace(err)
 					}
 
 					proto.Forward(conn)
