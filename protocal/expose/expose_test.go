@@ -42,16 +42,22 @@ func Test_expose(t *testing.T) {
 		Attr: attr,
 	})
 
-	time.Sleep(time.Millisecond * 10)
-
-	c1, err := router.Get("test").Open()
-	if err != nil {
-		t.Fatal(err)
+	retryMax := 100
+	for i := 0; i < retryMax; i++ {
+		c1, err := router.Get("test").Open()
+		if i+1 == retryMax && err != nil {
+			t.Fatal(err)
+		}
+		if err == nil {
+			go func() {
+				c1.Write([]byte("hello"))
+				c1.Close()
+			}()
+			break
+		}
+		time.Sleep(time.Millisecond * 10)
 	}
-	go func() {
-		c1.Write([]byte("hello"))
-		c1.Close()
-	}()
+
 	c2 := <-accept
 
 	data, err := ioutil.ReadAll(c2)
