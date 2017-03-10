@@ -2,7 +2,6 @@ package link
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 
@@ -57,13 +56,15 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 			}
 
 			return func() (err error) {
-				defer func() {
-					// recover for service.Open,if you are sure that will not panic
-					// just delete this recover defer
-					if r := recover(); r != nil {
-						err = errors.New(fmt.Sprint("panic:", r))
-					}
-				}()
+				/*
+					defer func() {
+						// recover for service.Open,if you are sure that will not panic
+						// just delete this recover defer
+						if r := recover(); r != nil {
+							err = errors.New(fmt.Sprint("panic:", r))
+						}
+					}()
+				*/
 
 				session := proto.Multiplex(false)
 				for {

@@ -23,25 +23,17 @@ func TestService(t *testing.T) {
 	}
 
 	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				return
-			}
-
-			t.Fatal("expect panic")
-		}()
-		service.Close()
+		err := service.Close()
+		if err == nil {
+			t.Fatal("expect err")
+		}
 	}()
 
 	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				return
-			}
-
-			t.Fatal("expect panic")
-		}()
-		service.Open()
+		_, err := service.Open()
+		if err == nil {
+			t.Fatal("expect err")
+		}
 	}()
 
 	closeCalled := false
