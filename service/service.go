@@ -8,24 +8,20 @@ import (
 )
 
 type Service struct {
-	name string
-	attr *SafedAttribute
-
-	setOpenFuncOnce *sync.Once
-	openFn          func() (net.Conn, error)
-
-	setCloseFuncOnce *sync.Once
-	closeFn          func() error
+	mu      *sync.RWMutex
+	name    string
+	attr    *SafedAttribute
+	openFn  func() (net.Conn, error)
+	closeFn func() error
 }
 
 func newService(name string) *Service {
 	return &Service{
-		name:             name,
-		attr:             NewSafedAttribute(new(Attribute)),
-		setOpenFuncOnce:  new(sync.Once),
-		openFn:           nil,
-		setCloseFuncOnce: new(sync.Once),
-		closeFn:          nil,
+		mu:      new(sync.RWMutex),
+		name:    name,
+		attr:    NewSafedAttribute(new(Attribute)),
+		openFn:  nil,
+		closeFn: nil,
 	}
 }
 
@@ -33,6 +29,10 @@ func (s *Service) Name() string {
 	if s == nil {
 		return ""
 	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	return s.name
 }
 
@@ -40,6 +40,9 @@ func (s *Service) Attribute() *SafedAttribute {
 	if s == nil {
 		return nil
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	return s.attr
 }
 
@@ -47,6 +50,10 @@ func (s *Service) Open() (net.Conn, error) {
 	if s == nil {
 		return nil, errors.NotFoundf("service")
 	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	if s.openFn == nil {
 		return nil, errors.Errorf("service %q is not ready", s.Name())
 	}
@@ -57,6 +64,10 @@ func (s *Service) Close() error {
 	if s == nil {
 		return errors.NotFoundf("service")
 	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	if s.closeFn == nil {
 		return errors.Errorf("service %q is not ready", s.Name())
 	}
@@ -64,13 +75,31 @@ func (s *Service) Close() error {
 }
 
 func (s *Service) setOpenFunc(fn func() (net.Conn, error)) {
-	s.setOpenFuncOnce.Do(func() {
-		s.openFn = fn
-	})
+	if s == nil {
+		panic("service is nil")
+	}
+
+	if fn == nil {
+		panic("fn is nil")
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.openFn = fn
 }
 
 func (s *Service) setCloseFunc(fn func() error) {
-	s.setCloseFuncOnce.Do(func() {
-		s.closeFn = fn
-	})
+	if s == nil {
+		panic("service is nil")
+	}
+
+	if fn == nil {
+		panic("fn is nil")
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.closeFn = fn
 }
