@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/juju/errors"
-	"github.com/service-exposer/exposer"
+	"github.com/service-exposer/exposer/protocal"
 )
 
 const (
@@ -23,8 +23,8 @@ type Forward struct {
 	Address string
 }
 
-func ServerSide() exposer.HandshakeHandleFunc {
-	return func(proto *exposer.Protocal, cmd string, details []byte) error {
+func ServerSide() protocal.HandshakeHandleFunc {
+	return func(proto *protocal.Protocal, cmd string, details []byte) error {
 		switch cmd {
 		case CMD_FORWARD:
 			var forward Forward
@@ -84,9 +84,9 @@ func ServerSide() exposer.HandshakeHandleFunc {
 					}()
 				}
 			*/
-			exposer.Serve(proto.Multiplex(false), func(conn net.Conn) exposer.ProtocalHandler {
-				proto := exposer.NewProtocal(conn)
-				proto.On = func(proto *exposer.Protocal, cmd string, details []byte) error {
+			protocal.Serve(proto.Multiplex(false), func(conn net.Conn) protocal.ProtocalHandler {
+				proto := protocal.NewProtocal(conn)
+				proto.On = func(proto *protocal.Protocal, cmd string, details []byte) error {
 					err := proto.Reply("", nil)
 					if err != nil {
 						return errors.Trace(err)
@@ -109,8 +109,8 @@ func ServerSide() exposer.HandshakeHandleFunc {
 
 }
 
-func ClientSide(ln net.Listener) exposer.HandshakeHandleFunc {
-	return func(proto *exposer.Protocal, cmd string, details []byte) error {
+func ClientSide(ln net.Listener) protocal.HandshakeHandleFunc {
+	return func(proto *protocal.Protocal, cmd string, details []byte) error {
 		switch cmd {
 		case CMD_FORWARD_REPLY:
 
@@ -154,8 +154,8 @@ func ClientSide(ln net.Listener) exposer.HandshakeHandleFunc {
 					}()
 				*/
 
-				proto_forward := exposer.NewProtocal(remote_conn)
-				proto_forward.On = func(proto *exposer.Protocal, cmd string, details []byte) error {
+				proto_forward := protocal.NewProtocal(remote_conn)
+				proto_forward.On = func(proto *protocal.Protocal, cmd string, details []byte) error {
 					proto.Forward(local_conn)
 					return nil
 				}

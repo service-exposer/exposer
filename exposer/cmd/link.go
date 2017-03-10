@@ -19,8 +19,8 @@ import (
 	"net"
 
 	"github.com/juju/errors"
-	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener/utils"
+	"github.com/service-exposer/exposer/protocal"
 	"github.com/service-exposer/exposer/protocal/auth"
 	"github.com/service-exposer/exposer/protocal/keepalive"
 	"github.com/service-exposer/exposer/protocal/link"
@@ -76,7 +76,7 @@ func init() {
 		log.Print("connect ", server_websocket_url())
 
 		nextRoutes := make(chan auth.NextRoute)
-		proto := exposer.NewProtocal(conn)
+		proto := protocal.NewProtocal(conn)
 		proto.On = auth.ClientSide(nextRoutes)
 
 		go func() {

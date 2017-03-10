@@ -1,4 +1,4 @@
-package exposer
+package protocal
 
 import (
 	"encoding/json"

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener"
+	"github.com/service-exposer/exposer/protocal"
 	"github.com/service-exposer/exposer/protocal/keepalive"
 	"github.com/service-exposer/exposer/protocal/route"
 	"github.com/service-exposer/exposer/service"
@@ -17,8 +17,8 @@ func Test_auth(t *testing.T) {
 
 	authRes := make(chan bool)
 
-	go exposer.Serve(ln, func(conn net.Conn) exposer.ProtocalHandler {
-		proto := exposer.NewProtocal(conn)
+	go protocal.Serve(ln, func(conn net.Conn) protocal.ProtocalHandler {
+		proto := protocal.NewProtocal(conn)
 		proto.On = ServerSide(service.NewRouter(), func(key string) bool {
 			auth := key == "test"
 			authRes <- auth
@@ -34,7 +34,7 @@ func Test_auth(t *testing.T) {
 		}
 		nextRoutes := make(chan NextRoute)
 
-		proto := exposer.NewProtocal(conn)
+		proto := protocal.NewProtocal(conn)
 		proto.On = ClientSide(nextRoutes)
 		go proto.Request(CMD_AUTH, &AuthReq{
 			Key: "",
@@ -53,7 +53,7 @@ func Test_auth(t *testing.T) {
 		}
 		nextRoutes := make(chan NextRoute, 2)
 
-		proto := exposer.NewProtocal(conn)
+		proto := protocal.NewProtocal(conn)
 		proto.On = ClientSide(nextRoutes)
 		go proto.Request(CMD_AUTH, &AuthReq{
 			Key: "test",
@@ -69,10 +69,10 @@ func Test_auth(t *testing.T) {
 			Req: route.RouteReq{
 				Type: route.KeepAlive,
 			},
-			HandleFunc: func() exposer.HandshakeHandleFunc {
+			HandleFunc: func() protocal.HandshakeHandleFunc {
 				handlefn := keepalive.ClientSide(0, 100*time.Millisecond)
 
-				return func(proto *exposer.Protocal, cmd string, details []byte) error {
+				return func(proto *protocal.Protocal, cmd string, details []byte) error {
 					keepaliveCmds_1 <- cmd
 					return handlefn(proto, cmd, details)
 				}
@@ -85,10 +85,10 @@ func Test_auth(t *testing.T) {
 			Req: route.RouteReq{
 				Type: route.KeepAlive,
 			},
-			HandleFunc: func() exposer.HandshakeHandleFunc {
+			HandleFunc: func() protocal.HandshakeHandleFunc {
 				handlefn := keepalive.ClientSide(0, 100*time.Millisecond)
 
-				return func(proto *exposer.Protocal, cmd string, details []byte) error {
+				return func(proto *protocal.Protocal, cmd string, details []byte) error {
 					keepaliveCmds_2 <- cmd
 					return handlefn(proto, cmd, details)
 				}

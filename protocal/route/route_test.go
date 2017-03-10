@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener"
+	"github.com/service-exposer/exposer/protocal"
 	"github.com/service-exposer/exposer/protocal/expose"
 	"github.com/service-exposer/exposer/protocal/forward"
 	"github.com/service-exposer/exposer/protocal/keepalive"
@@ -18,8 +18,8 @@ import (
 func Test_route(t *testing.T) {
 	ln, dial := listener.Pipe()
 
-	go exposer.Serve(ln, func(conn net.Conn) exposer.ProtocalHandler {
-		proto := exposer.NewProtocal(conn)
+	go protocal.Serve(ln, func(conn net.Conn) protocal.ProtocalHandler {
+		proto := protocal.NewProtocal(conn)
 		proto.On = ServerSide(service.NewRouter())
 		return proto
 	})
@@ -32,9 +32,9 @@ func Test_route(t *testing.T) {
 
 		cmds := make(chan string)
 
-		proto := exposer.NewProtocal(conn)
+		proto := protocal.NewProtocal(conn)
 		handlefn := keepalive.ClientSide(0, 100*time.Millisecond)
-		proto.On = ClientSide(func(proto *exposer.Protocal, cmd string, details []byte) error {
+		proto.On = ClientSide(func(proto *protocal.Protocal, cmd string, details []byte) error {
 			cmds <- cmd
 			return handlefn(proto, cmd, details)
 		}, keepalive.CMD_PING, nil)
@@ -56,11 +56,11 @@ func Test_route(t *testing.T) {
 
 		cmds := make(chan string)
 
-		proto := exposer.NewProtocal(conn)
+		proto := protocal.NewProtocal(conn)
 		handlefn := expose.ClientSide(func() (net.Conn, error) {
 			return nil, errors.New("test dial")
 		})
-		proto.On = ClientSide(func(proto *exposer.Protocal, cmd string, details []byte) error {
+		proto.On = ClientSide(func(proto *protocal.Protocal, cmd string, details []byte) error {
 			cmds <- cmd
 			return handlefn(proto, cmd, details)
 		}, expose.CMD_EXPOSE, &expose.ExposeReq{})
@@ -83,12 +83,12 @@ func Test_route(t *testing.T) {
 
 		cmds := make(chan string)
 
-		proto := exposer.NewProtocal(conn)
+		proto := protocal.NewProtocal(conn)
 
 		ln, _ := listener.Pipe()
 		handlefn := link.ClientSide(ln)
 
-		proto.On = ClientSide(func(proto *exposer.Protocal, cmd string, details []byte) error {
+		proto.On = ClientSide(func(proto *protocal.Protocal, cmd string, details []byte) error {
 			cmds <- cmd
 			return handlefn(proto, cmd, details)
 		}, link.CMD_LINK, &link.LinkReq{})
@@ -111,12 +111,12 @@ func Test_route(t *testing.T) {
 
 		cmds := make(chan string)
 
-		proto := exposer.NewProtocal(conn)
+		proto := protocal.NewProtocal(conn)
 
 		ln, _ := listener.Pipe()
 		handlefn := forward.ClientSide(ln)
 
-		proto.On = ClientSide(func(proto *exposer.Protocal, cmd string, details []byte) error {
+		proto.On = ClientSide(func(proto *protocal.Protocal, cmd string, details []byte) error {
 			cmds <- cmd
 			return handlefn(proto, cmd, details)
 		}, forward.CMD_FORWARD, &forward.Forward{})

@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/juju/errors"
-	"github.com/service-exposer/exposer"
+	"github.com/service-exposer/exposer/protocal"
 	"github.com/service-exposer/exposer/service"
 )
 
@@ -28,8 +28,8 @@ type LinkReq struct {
 	Name string
 }
 
-func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
-	return func(proto *exposer.Protocal, cmd string, details []byte) error {
+func ServerSide(router *service.Router) protocal.HandshakeHandleFunc {
+	return func(proto *protocal.Protocal, cmd string, details []byte) error {
 		switch cmd {
 		case CMD_LINK:
 			var req LinkReq
@@ -79,7 +79,7 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 						return errors.Trace(err)
 					}
 
-					go exposer.Forward(remote, local)
+					go protocal.Forward(remote, local)
 				}
 			}()
 		}
@@ -87,8 +87,8 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 	}
 }
 
-func ClientSide(ln net.Listener) exposer.HandshakeHandleFunc {
-	return func(proto *exposer.Protocal, cmd string, details []byte) error {
+func ClientSide(ln net.Listener) protocal.HandshakeHandleFunc {
+	return func(proto *protocal.Protocal, cmd string, details []byte) error {
 		switch cmd {
 		case CMD_LINK_REPLY:
 			var reply Reply
@@ -136,7 +136,7 @@ func ClientSide(ln net.Listener) exposer.HandshakeHandleFunc {
 						return
 					}
 
-					go exposer.Forward(remote, local)
+					go protocal.Forward(remote, local)
 				}
 			}()
 

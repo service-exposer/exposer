@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/juju/errors"
-	"github.com/service-exposer/exposer"
+	"github.com/service-exposer/exposer/protocal"
 )
 
 var (
@@ -26,7 +26,7 @@ const (
 	EVENT_TIMEOUT = "event:timeout"
 )
 
-func ServerSide(timeout time.Duration) exposer.HandshakeHandleFunc {
+func ServerSide(timeout time.Duration) protocal.HandshakeHandleFunc {
 	if timeout == 0 {
 		timeout = DefaultTimeout
 	}
@@ -38,7 +38,7 @@ func ServerSide(timeout time.Duration) exposer.HandshakeHandleFunc {
 
 	var once = new(sync.Once)
 
-	return func(proto *exposer.Protocal, cmd string, details []byte) error {
+	return func(proto *protocal.Protocal, cmd string, details []byte) error {
 		once.Do(func() {
 			go func() {
 				for range time.Tick(timeout) {
@@ -72,7 +72,7 @@ func ServerSide(timeout time.Duration) exposer.HandshakeHandleFunc {
 	}
 }
 
-func ClientSide(timeout, interval time.Duration) exposer.HandshakeHandleFunc {
+func ClientSide(timeout, interval time.Duration) protocal.HandshakeHandleFunc {
 	if timeout == 0 {
 		timeout = DefaultTimeout
 	}
@@ -91,7 +91,7 @@ func ClientSide(timeout, interval time.Duration) exposer.HandshakeHandleFunc {
 
 	var once = new(sync.Once)
 
-	return func(proto *exposer.Protocal, cmd string, details []byte) error {
+	return func(proto *protocal.Protocal, cmd string, details []byte) error {
 		once.Do(func() {
 			go func() {
 				for range time.Tick(timeout) {

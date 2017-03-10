@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/juju/errors"
-	"github.com/service-exposer/exposer"
+	"github.com/service-exposer/exposer/protocal"
 	"github.com/service-exposer/exposer/protocal/route"
 	"github.com/service-exposer/exposer/service"
 )
@@ -27,8 +27,8 @@ type AuthReq struct {
 	Key string
 }
 
-func ServerSide(router *service.Router, authFn func(key string) (allow bool)) exposer.HandshakeHandleFunc {
-	return func(proto *exposer.Protocal, cmd string, details []byte) error {
+func ServerSide(router *service.Router, authFn func(key string) (allow bool)) protocal.HandshakeHandleFunc {
+	return func(proto *protocal.Protocal, cmd string, details []byte) error {
 		switch cmd {
 		case CMD_AUTH:
 			var req AuthReq
@@ -60,7 +60,7 @@ func ServerSide(router *service.Router, authFn func(key string) (allow bool)) ex
 					return errors.Trace(err)
 				}
 
-				proto_next := exposer.NewProtocalWithParent(proto, conn)
+				proto_next := protocal.NewProtocalWithParent(proto, conn)
 				proto_next.On = route.ServerSide(router)
 				go proto_next.Handle()
 			}
@@ -72,13 +72,13 @@ func ServerSide(router *service.Router, authFn func(key string) (allow bool)) ex
 
 type NextRoute struct {
 	Req        route.RouteReq
-	HandleFunc exposer.HandshakeHandleFunc
+	HandleFunc protocal.HandshakeHandleFunc
 	Cmd        string
 	Details    interface{}
 }
 
-func ClientSide(routes <-chan NextRoute) exposer.HandshakeHandleFunc {
-	return func(proto *exposer.Protocal, cmd string, details []byte) error {
+func ClientSide(routes <-chan NextRoute) protocal.HandshakeHandleFunc {
+	return func(proto *protocal.Protocal, cmd string, details []byte) error {
 		switch cmd {
 		case CMD_AUTH_REPLY:
 			var reply Reply
@@ -100,7 +100,7 @@ func ClientSide(routes <-chan NextRoute) exposer.HandshakeHandleFunc {
 				}
 
 				r := nr
-				proto_next := exposer.NewProtocalWithParent(proto, conn)
+				proto_next := protocal.NewProtocalWithParent(proto, conn)
 				proto_next.On = route.ClientSide(r.HandleFunc, r.Cmd, r.Details)
 				go proto_next.Request(route.CMD_ROUTE, &r.Req)
 			}

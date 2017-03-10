@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/juju/errors"
-	"github.com/service-exposer/exposer"
+	"github.com/service-exposer/exposer/protocal"
 	"github.com/service-exposer/exposer/protocal/expose"
 	"github.com/service-exposer/exposer/protocal/forward"
 	"github.com/service-exposer/exposer/protocal/keepalive"
@@ -39,13 +39,13 @@ type RouteReq struct {
 	Type Type
 }
 
-func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
+func ServerSide(router *service.Router) protocal.HandshakeHandleFunc {
 	keepaliveFn := keepalive.ServerSide(0)
 	exposeFn := expose.ServerSide(router)
 	linkFn := link.ServerSide(router)
 	forwardFn := forward.ServerSide()
 
-	return func(proto *exposer.Protocal, cmd string, details []byte) error {
+	return func(proto *protocal.Protocal, cmd string, details []byte) error {
 		switch cmd {
 		case CMD_ROUTE:
 			var req RouteReq
@@ -108,8 +108,8 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 	}
 }
 
-func ClientSide(nextHandleFunc exposer.HandshakeHandleFunc, nextCmd string, nextDetails interface{}) exposer.HandshakeHandleFunc {
-	return func(proto *exposer.Protocal, cmd string, details []byte) error {
+func ClientSide(nextHandleFunc protocal.HandshakeHandleFunc, nextCmd string, nextDetails interface{}) protocal.HandshakeHandleFunc {
+	return func(proto *protocal.Protocal, cmd string, details []byte) error {
 		switch cmd {
 		case CMD_ROUTE_REPLY:
 			var reply Reply

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/juju/errors"
-	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener"
+	"github.com/service-exposer/exposer/protocal"
 )
 
 type command struct {
@@ -32,11 +32,11 @@ func Test_keepalive(t *testing.T) {
 		cmds := make(chan *command)
 
 		ln, dial := listener.Pipe()
-		go exposer.Serve(ln, func(conn net.Conn) exposer.ProtocalHandler {
-			proto := exposer.NewProtocal(conn)
+		go protocal.Serve(ln, func(conn net.Conn) protocal.ProtocalHandler {
+			proto := protocal.NewProtocal(conn)
 			handlefn := ServerSide(server_timeout)
 
-			proto.On = func(proto *exposer.Protocal, cmd string, details []byte) error {
+			proto.On = func(proto *protocal.Protocal, cmd string, details []byte) error {
 				time.Sleep(server_delay)
 				cmds <- &command{
 					isServer: true,
@@ -53,10 +53,10 @@ func Test_keepalive(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		proto := exposer.NewProtocal(conn)
+		proto := protocal.NewProtocal(conn)
 
 		handlefn := ClientSide(client_timeout, client_interval)
-		proto.On = func(proto *exposer.Protocal, cmd string, details []byte) error {
+		proto.On = func(proto *protocal.Protocal, cmd string, details []byte) error {
 			cmds <- &command{
 				isClient: true,
 				cmd:      cmd,

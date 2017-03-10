@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/juju/errors"
-	"github.com/service-exposer/exposer"
+	"github.com/service-exposer/exposer/protocal"
 	"github.com/service-exposer/exposer/service"
 )
 
@@ -24,8 +24,8 @@ type ExposeReq struct {
 	Attr service.Attribute
 }
 
-func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
-	return func(proto *exposer.Protocal, cmd string, details []byte) error {
+func ServerSide(router *service.Router) protocal.HandshakeHandleFunc {
+	return func(proto *protocal.Protocal, cmd string, details []byte) error {
 		switch cmd {
 		case CMD_EXPOSE:
 			var req ExposeReq
@@ -78,8 +78,8 @@ func ServerSide(router *service.Router) exposer.HandshakeHandleFunc {
 
 	}
 }
-func ClientSide(dial func() (net.Conn, error)) exposer.HandshakeHandleFunc {
-	return func(proto *exposer.Protocal, cmd string, details []byte) error {
+func ClientSide(dial func() (net.Conn, error)) protocal.HandshakeHandleFunc {
+	return func(proto *protocal.Protocal, cmd string, details []byte) error {
 		switch cmd {
 		case CMD_EXPOSE_REPLY:
 			var reply Reply
@@ -106,7 +106,7 @@ func ClientSide(dial func() (net.Conn, error)) exposer.HandshakeHandleFunc {
 					continue
 				}
 
-				go exposer.Forward(remote, local)
+				go protocal.Forward(remote, local)
 			}
 		}
 

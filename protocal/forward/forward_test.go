@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener/utils"
+	"github.com/service-exposer/exposer/protocal"
 )
 
 func TestForward(t *testing.T) {
@@ -41,8 +41,8 @@ func TestForward(t *testing.T) {
 	}
 	defer forward_ws_ln.Close()
 
-	go exposer.Serve(forward_ws_ln, func(conn net.Conn) exposer.ProtocalHandler {
-		proto := exposer.NewProtocal(conn)
+	go protocal.Serve(forward_ws_ln, func(conn net.Conn) protocal.ProtocalHandler {
+		proto := protocal.NewProtocal(conn)
 		proto.On = ServerSide()
 		return proto
 	})
@@ -61,7 +61,7 @@ func TestForward(t *testing.T) {
 	}
 	defer conn.Close()
 
-	proto := exposer.NewProtocal(conn)
+	proto := protocal.NewProtocal(conn)
 	proto.On = ClientSide(local_ln)
 
 	go proto.Request(CMD_FORWARD, &Forward{

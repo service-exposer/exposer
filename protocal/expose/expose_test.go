@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener"
+	"github.com/service-exposer/exposer/protocal"
 	"github.com/service-exposer/exposer/service"
 )
 
@@ -15,8 +15,8 @@ func Test_expose(t *testing.T) {
 	router := service.NewRouter()
 	ln, dial := listener.Pipe()
 
-	go exposer.Serve(ln, func(conn net.Conn) exposer.ProtocalHandler {
-		proto := exposer.NewProtocal(conn)
+	go protocal.Serve(ln, func(conn net.Conn) protocal.ProtocalHandler {
+		proto := protocal.NewProtocal(conn)
 		proto.On = ServerSide(router)
 		return proto
 	})
@@ -27,7 +27,7 @@ func Test_expose(t *testing.T) {
 	}
 
 	accept := make(chan net.Conn, 2)
-	proto := exposer.NewProtocal(conn)
+	proto := protocal.NewProtocal(conn)
 	proto.On = ClientSide(func() (net.Conn, error) {
 		c1, c2 := net.Pipe()
 		accept <- c1

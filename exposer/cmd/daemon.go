@@ -29,8 +29,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/juju/errors"
-	"github.com/service-exposer/exposer"
 	"github.com/service-exposer/exposer/listener/utils"
+	"github.com/service-exposer/exposer/protocal"
 	"github.com/service-exposer/exposer/protocal/auth"
 	"github.com/service-exposer/exposer/service"
 	"github.com/spf13/cobra"
@@ -259,8 +259,8 @@ func init() {
 				fmt.Fprintln(os.Stderr, errors.ErrorStack(errors.Annotate(err, "HTTP server shutdown")))
 			}
 		}()
-		exposer.Serve(wsln, func(conn net.Conn) exposer.ProtocalHandler {
-			proto := exposer.NewProtocal(conn)
+		protocal.Serve(wsln, func(conn net.Conn) protocal.ProtocalHandler {
+			proto := protocal.NewProtocal(conn)
 			proto.On = auth.ServerSide(serviceRouter, func(k string) bool {
 				return k == key
 			})
