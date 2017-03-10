@@ -85,15 +85,12 @@ func TestProtocal_Forword(t *testing.T) {
 		defer c2.Close()
 
 		proto_c := NewProtocal(c)
-
-		//defer c1.Close()
-
 		go proto_c.Forward(c2)
 
 		c1.Write([]byte("test"))
-		c1.Close()
 
-		data, err := ioutil.ReadAll(c3)
+		data := make([]byte, 4)
+		_, err := io.ReadAtLeast(c3, data, len(data))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -120,9 +117,9 @@ func TestProtocal_Forword(t *testing.T) {
 		go proto.Handle()
 
 		c1.Write([]byte(`{"cmd":"forward","details":null}test`))
-		c1.Close()
 
-		data, err := ioutil.ReadAll(c3)
+		data := make([]byte, 4)
+		_, err := io.ReadAtLeast(c3, data, len(data))
 		if err != nil {
 			t.Fatal(err)
 		}

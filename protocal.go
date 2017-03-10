@@ -112,21 +112,8 @@ func (proto *Protocal) Forward(conn net.Conn) {
 
 	proto.isHandshakeDone = true
 
-	wg := &sync.WaitGroup{}
-	wg.Add(2)
-
-	go func() {
-		defer wg.Done()
-		defer conn.Close()
-		io.Copy(conn, io.MultiReader(proto.handshakeDecoder.Buffered(), proto.conn))
-	}()
-
-	go func() {
-		defer wg.Done()
-		defer proto.conn.Close()
-		io.Copy(proto.conn, conn)
-	}()
-	wg.Wait()
+	go io.Copy(conn, io.MultiReader(proto.handshakeDecoder.Buffered(), proto.conn))
+	io.Copy(proto.conn, conn)
 }
 
 func (proto *Protocal) Request(cmd string, details interface{}) {
