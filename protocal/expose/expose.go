@@ -108,7 +108,6 @@ func ClientSide(dial func() (net.Conn, error)) exposer.HandshakeHandleFunc {
 
 				go exposer.Forward(remote, local)
 			}
-			return nil
 		}
 
 		return errors.New("unknow cmd: " + cmd)

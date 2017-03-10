@@ -75,7 +75,7 @@ func TestAttribute_Update(t *testing.T) {
 
 func TestAttribute_UpdateAndView(t *testing.T) {
 	attr := NewSafedAttribute(new(Attribute))
-	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*200)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*200)
 	go func() {
 		for {
 			select {
@@ -99,15 +99,21 @@ func TestAttribute_UpdateAndView(t *testing.T) {
 				return
 			default:
 			}
+			attr.View(func(attr Attribute) error {
+				if attr.HTTP.Is != true {
+					return errors.New("attr.HTTP.Is != true")
+				}
+				if attr.HTTP.Host != "hostname.test" {
+					return errors.New("attr.HTTP.Host != hostname.test; got " + attr.HTTP.Host)
+				}
+				return nil
+			})
 		}
-		attr.View(func(attr Attribute) error {
-			if attr.HTTP.Is != true {
-				return errors.New("attr.HTTP.Is != true")
-			}
-			if attr.HTTP.Host != "hostname.test" {
-				return errors.New("attr.HTTP.Host != hostname.test; got " + attr.HTTP.Host)
-			}
-			return nil
-		})
 	}()
+
+	select {
+	case <-time.After(time.Second):
+	case <-ctx.Done():
+	}
+	cancel()
 }

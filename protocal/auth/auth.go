@@ -64,8 +64,6 @@ func ServerSide(router *service.Router, authFn func(key string) (allow bool)) ex
 				proto_next.On = route.ServerSide(router)
 				go proto_next.Handle()
 			}
-
-			return nil
 		}
 
 		return errors.New("unknow cmd: " + cmd)
